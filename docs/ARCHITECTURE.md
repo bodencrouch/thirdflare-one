@@ -2,7 +2,7 @@
 
 ## Problem
 
-Cloudflare ships a full **Cloudflare One** desktop client on Windows. Other platforms expose **`warp-cli`** and background daemons but no equivalent GUI. ThirdFlare reimplements that control surface as a local HTTP API + optional Web UI, targeting **functional parity** and **drop-in compatibility** with existing WARP installs.
+Cloudflare ships a full **Cloudflare One** desktop client on Windows. Other platforms expose **`warp-cli`** and background daemons but no equivalent GUI. ThirdFlare One reimplements that control surface as a local HTTP API + optional Web UI, targeting **functional parity** and **drop-in compatibility** with existing WARP installs.
 
 ## High-level diagram
 
@@ -14,7 +14,7 @@ flowchart LR
     WARP --> CLI
   end
 
-  subgraph thirdflare [ThirdFlare]
+  subgraph thirdflare [ThirdFlare One]
     SRV[Node server.js]
     CFG[lib/config.mjs]
     UI[Static Web UI]

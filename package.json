@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "ThirdFlare — unofficial cross-platform Cloudflare One client via warp-cli.",
+  "description": "ThirdFlare One — unofficial cross-platform Cloudflare One client via warp-cli.",
   "license": "MIT",
   "engines": {
     "node": ">=20"

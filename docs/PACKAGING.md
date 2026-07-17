@@ -1,6 +1,6 @@
 # Packaging
 
-ThirdFlare ships as `thirdflare` packages (legacy `cloudflare-one-gui` wrapper included). Artifacts do **not** bundle Cloudflare WARP — install the official client first.
+ThirdFlare One ships as `thirdflare` packages (legacy `cloudflare-one-gui` wrapper included). Artifacts do **not** bundle Cloudflare WARP — install the official client first.
 https://developers.cloudflare.com/warp-client/get-started/linux/
 
 ## Formats

@@ -17,4 +17,4 @@ if systemctl --user daemon-reload >/dev/null 2>&1; then
   echo "Reloaded user systemd manager."
 fi
 
-echo "Removed ThirdFlare user service files."
+echo "Removed ThirdFlare One user service files."

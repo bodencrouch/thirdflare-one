@@ -34,7 +34,7 @@ run_warp_cli() {
 
 usage() {
   cat <<USAGE
-ThirdFlare — unofficial third-party Cloudflare One client
+ThirdFlare One — unofficial third-party Cloudflare One client
 
 Usage:
   thirdflare                    Start/reuse the daemon and open the Web UI
@@ -46,7 +46,7 @@ Usage:
   thirdflare --toggle           Connect if disconnected, otherwise disconnect
   thirdflare --warp-status      Print warp-cli status
   thirdflare --tray             Start the optional tray menu
-  thirdflare --version          Print ThirdFlare version
+  thirdflare --version          Print ThirdFlare One version
   thirdflare --help             Show this help
 
 Legacy alias: cloudflare-one-gui (same binary)
@@ -128,7 +128,7 @@ start_server() {
     sleep 0.1
   done
 
-  echo "ThirdFlare daemon did not become healthy. Log: $LOG_FILE" >&2
+  echo "ThirdFlare One daemon did not become healthy. Log: $LOG_FILE" >&2
   if is_running; then
     kill "$(cat "$PID_FILE")" 2>/dev/null || true
     rm -f "$PID_FILE"
@@ -140,9 +140,9 @@ stop_server() {
   if is_running; then
     kill "$(cat "$PID_FILE")"
     rm -f "$PID_FILE"
-    echo "Stopped ThirdFlare daemon."
+    echo "Stopped ThirdFlare One daemon."
   else
-    echo "ThirdFlare daemon is not running."
+    echo "ThirdFlare One daemon is not running."
   fi
 }
 
@@ -170,10 +170,10 @@ run_warp_action() {
   local verb="$1"
   local output
   if output="$(run_warp_cli --no-ansi --no-paginate "$verb" 2>&1)"; then
-    notify "ThirdFlare" "warp-cli $verb completed"
+    notify "ThirdFlare One" "warp-cli $verb completed"
     printf '%s\n' "$output"
   else
-    notify "ThirdFlare" "warp-cli $verb failed"
+    notify "ThirdFlare One" "warp-cli $verb failed"
     printf '%s\n' "$output" >&2
     return 1
   fi
@@ -198,9 +198,9 @@ case "${1:-}" in
     ;;
   --status)
     if is_running && health_ok; then
-      echo "ThirdFlare is running at $URL"
+      echo "ThirdFlare One is running at $URL"
     else
-      echo "ThirdFlare is not running."
+      echo "ThirdFlare One is not running."
       exit 1
     fi
     ;;
@@ -239,7 +239,7 @@ case "${1:-}" in
     export THIRDFLARE_WEBUI=1
     start_server
     open_gui
-    echo "ThirdFlare opened at $URL"
+    echo "ThirdFlare One opened at $URL"
     ;;
   *)
     usage >&2

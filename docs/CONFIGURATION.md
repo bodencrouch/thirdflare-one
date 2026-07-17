@@ -1,6 +1,6 @@
 # Configuration
 
-ThirdFlare uses layered configuration so operators can manage the daemon idiomatically on each platform while still allowing provisional overrides from the app.
+ThirdFlare One uses layered configuration so operators can manage the daemon idiomatically on each platform while still allowing provisional overrides from the app.
 
 ## Precedence (low → high)
 
@@ -169,4 +169,4 @@ curl -s -X POST http://127.0.0.1:4173/api/config/session \
 
 ## WARP / Cloudflare One settings
 
-ThirdFlare does **not** replace Cloudflare account policy or MDM. Device modes, split tunnels, Gateway IDs, and registration are still applied through `warp-cli` exactly as on Windows — ThirdFlare is a drop-in UI and automation layer, not a separate VPN implementation.
+ThirdFlare One does **not** replace Cloudflare account policy or MDM. Device modes, split tunnels, Gateway IDs, and registration are still applied through `warp-cli` exactly as on Windows — ThirdFlare One is a drop-in UI and automation layer, not a separate VPN implementation.

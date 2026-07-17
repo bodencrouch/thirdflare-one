@@ -177,7 +177,7 @@ test("checkForUpdate empty releases is graceful", async () => {
 
 test("applyAppImageUpdate writes and replaces target", async () => {
   const dir = mkdtempSync(join(tmpdir(), "thirdflare-upd-"));
-  const target = join(dir, "ThirdFlare.AppImage");
+  const target = join(dir, "ThirdFlare-One.AppImage");
   writeFileSync(target, "old-binary");
   chmodSync(target, 0o755);
 

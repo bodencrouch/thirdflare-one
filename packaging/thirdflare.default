@@ -1,4 +1,4 @@
-# ThirdFlare — systemd EnvironmentFile (Debian/RHEL idiomatic)
+# ThirdFlare One — systemd EnvironmentFile (Debian/RHEL idiomatic)
 # Install to /etc/default/thirdflare or reference from a systemd drop-in.
 #
 # Precedence (low → high): defaults → /etc/thirdflare/config.json → this file →

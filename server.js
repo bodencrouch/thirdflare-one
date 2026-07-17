@@ -506,7 +506,7 @@ async function serveStatic(req, res, url) {
   const active = getConfig();
   if (!active.webui?.enabled && url.pathname !== "/" && !url.pathname.startsWith("/api/")) {
     res.writeHead(503, { "content-type": "text/plain; charset=utf-8" });
-    res.end("ThirdFlare Web UI is disabled. Enable webui.enabled in config or the in-app Settings page.");
+    res.end("ThirdFlare One Web UI is disabled. Enable webui.enabled in config or the in-app Settings page.");
     return;
   }
   let pathname = decodeURIComponent(url.pathname);

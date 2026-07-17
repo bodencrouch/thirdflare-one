@@ -1,6 +1,6 @@
 # Updates
 
-ThirdFlare checks GitHub Releases for newer versions, with optional AppImage auto-apply and fork/release selection (PyKotor-inspired, streamlined).
+ThirdFlare One checks GitHub Releases for newer versions, with optional AppImage auto-apply and fork/release selection (PyKotor-inspired, streamlined).
 
 ## Pipeline
 
@@ -79,7 +79,7 @@ APIs:
 Optional auth for higher GitHub rate limits: `THIRDFLARE_GITHUB_TOKEN` or `GITHUB_TOKEN`.
 
 Override install detection: `THIRDFLARE_INSTALL_FORMAT=appimage|deb|rpm|…`  
-AppImage path override: `THIRDFLARE_APPIMAGE_PATH=/path/to/ThirdFlare.AppImage`
+AppImage path override: `THIRDFLARE_APPIMAGE_PATH=/path/to/ThirdFlare-One.AppImage`
 
 ## Asset naming contract
 

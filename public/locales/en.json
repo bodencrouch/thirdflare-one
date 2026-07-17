@@ -13,7 +13,7 @@
     "advanced": "Advanced"
   },
   "brand": {
-    "title": "ThirdFlare",
+    "title": "ThirdFlare One",
     "subtitle": "Unofficial Cloudflare One · cross-platform"
   },
   "common": {
@@ -44,7 +44,7 @@
   },
   "app": {
     "title": "App",
-    "copy": "ThirdFlare preferences, localization, and updates.",
+    "copy": "ThirdFlare One preferences, localization, and updates.",
     "general": "General",
     "locale": "Language",
     "updates": "Updates",
@@ -57,7 +57,7 @@
     "updateAvailable": "Update available: {version}",
     "upToDate": "You are up to date.",
     "downgradeWarn": "Selected release is older than the installed version.",
-    "restartRequired": "Update applied. Restart ThirdFlare to finish.",
+    "restartRequired": "Update applied. Restart ThirdFlare One to finish.",
     "releaseNotes": "Release notes",
     "stable": "Stable",
     "beta": "Beta",

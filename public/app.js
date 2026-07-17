@@ -414,7 +414,7 @@ function appView() {
   const version = state.version?.version || "…";
   const format = state.version?.installFormat || "…";
   about.innerHTML = `
-    <div class="panel-heading"><h3>${t("app.about")}</h3><span>ThirdFlare</span></div>
+    <div class="panel-heading"><h3>${t("app.about")}</h3><span>ThirdFlare One</span></div>
     <div class="state-grid">
       <div class="state-datum"><span>${t("app.currentVersion")}</span><strong>${escapeHtml(version)}</strong></div>
       <div class="state-datum"><span>${t("app.installFormat")}</span><strong>${escapeHtml(format)}</strong></div>

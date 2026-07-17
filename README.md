@@ -1,12 +1,12 @@
-# ThirdFlare
+# ThirdFlare One
 
-**ThirdFlare** is an unofficial, third-party reimplementation of the [Cloudflare One](https://developers.cloudflare.com/cloudflare-one/) desktop experience (formerly branded around WARP on the client). Windows ships the only official full GUI today; Linux, macOS, and headless environments get `warp-cli` without a comparable app. ThirdFlare closes that gap with **drop-in `warp-cli` compatibility** — same daemon, same settings surface, same workflows — on every OS we package.
+**ThirdFlare One** is an unofficial, third-party reimplementation of the [Cloudflare One](https://developers.cloudflare.com/cloudflare-one/) desktop experience (formerly branded around WARP on the client). Windows ships the only official full GUI today; Linux, macOS, and headless environments get `warp-cli` without a comparable app. ThirdFlare One closes that gap with **drop-in `warp-cli` compatibility** — same daemon, same settings surface, same workflows — on every OS we package.
 
-> **Not affiliated with Cloudflare.** ThirdFlare is community software that talks to your existing WARP install. Cloudflare trademarks belong to Cloudflare, Inc.
+> **Not affiliated with Cloudflare.** ThirdFlare One is community software that talks to your existing WARP install. Cloudflare trademarks belong to Cloudflare, Inc.
 
-## Why “ThirdFlare”?
+## Why “ThirdFlare One”?
 
-Wordplay on **third-party** + **Cloudflare**. You keep the official WARP daemon; we provide the One-style control plane the other platforms never got.
+Wordplay on **third-party** + **Cloudflare One**. You keep the official WARP daemon; we provide the One-style control plane the other platforms never got. The package and binary stay `thirdflare` for short CLI paths.
 
 ## Features
 
@@ -100,7 +100,7 @@ systemctl --user edit thirdflare
 
 ## Architecture
 
-ThirdFlare is a small Node HTTP server plus static Web UI that wraps `spawn('warp-cli', …)` (or `flatpak-spawn --host warp-cli` in Flatpak). Live status uses `warp-cli --listen status`; snapshots poll the same command surface as the Windows app.
+ThirdFlare One is a small Node HTTP server plus static Web UI that wraps `spawn('warp-cli', …)` (or `flatpak-spawn --host warp-cli` in Flatpak). Live status uses `warp-cli --listen status`; snapshots poll the same command surface as the Windows app.
 
 Read **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** for API routes, config module layout, and platform matrix.
 

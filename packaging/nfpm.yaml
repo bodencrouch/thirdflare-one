@@ -5,12 +5,12 @@ platform: linux
 version: ${VERSION}
 section: net
 priority: optional
-maintainer: ThirdFlare contributors
+maintainer: ThirdFlare One contributors
 description: |-
-  ThirdFlare — unofficial third-party Cloudflare One client for Linux.
+  ThirdFlare One — unofficial third-party Cloudflare One client for Linux.
   Drop-in warp-cli GUI parity with the Windows Cloudflare One app.
   Requires Cloudflare WARP (warp-cli) on the host.
-vendor: ThirdFlare
+vendor: ThirdFlare One
 homepage: https://github.com/bodencrouch/cloudflare-one-gui-linux
 license: MIT
 contents:

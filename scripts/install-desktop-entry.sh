@@ -11,13 +11,13 @@ mkdir -p "$APPLICATIONS_DIR"
 cat > "$DESKTOP_FILE" <<DESKTOP
 [Desktop Entry]
 Type=Application
-Name=ThirdFlare
+Name=ThirdFlare One
 Comment=Unofficial cross-platform Cloudflare One client
 Exec=$APP_DIR/bin/thirdflare
 Icon=$APP_DIR/assets/thirdflare.svg
 Terminal=false
 Categories=Network;
-Keywords=Cloudflare;WARP;Zero Trust;ThirdFlare;VPN;DNS;
+Keywords=Cloudflare;WARP;Zero Trust;ThirdFlare One;VPN;DNS;
 StartupNotify=true
 Actions=Connect;Disconnect;Toggle;Status;Tray;
 

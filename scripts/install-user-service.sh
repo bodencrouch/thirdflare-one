@@ -10,7 +10,7 @@ mkdir -p "$SYSTEMD_USER_DIR"
 
 cat > "$SERVICE_FILE" <<SERVICE
 [Unit]
-Description=ThirdFlare Cloudflare One daemon
+Description=ThirdFlare One daemon
 Documentation=file://$APP_DIR/README.md
 After=network-online.target
 
