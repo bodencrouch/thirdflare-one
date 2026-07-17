@@ -1,0 +1,56 @@
+name: cloudflare-one-gui
+base: core24
+version: '0.1.0'
+summary: Linux GUI for Cloudflare WARP via warp-cli
+description: |
+  A local desktop-style GUI that wraps the host Cloudflare WARP client (warp-cli).
+  Classic confinement is required so the app can reach host warp-cli and the WARP daemon.
+  Install Cloudflare WARP separately:
+  https://developers.cloudflare.com/warp-client/get-started/linux/
+grade: stable
+confinement: classic
+license: MIT
+
+apps:
+  cloudflare-one-gui:
+    command: bin/cloudflare-one-gui
+    desktop: share/applications/cloudflare-one-gui.desktop
+    common-id: cloudflare-one-gui
+
+parts:
+  cloudflare-one-gui:
+    plugin: nil
+    source: .
+    source-type: local
+    build-packages:
+      - rsync
+    override-build: |
+      set -euo pipefail
+      install -d "$CRAFT_PART_INSTALL/usr/lib/cloudflare-one-gui"
+      rsync -a \
+        --exclude '.git' \
+        --exclude 'dist' \
+        --exclude 'node_modules' \
+        --exclude 'agentdecompile_projects' \
+        --exclude 'packaging/flatpak' \
+        "$CRAFT_PART_SRC/" "$CRAFT_PART_INSTALL/usr/lib/cloudflare-one-gui/"
+      # Keep only runtime files under lib.
+      rm -rf \
+        "$CRAFT_PART_INSTALL/usr/lib/cloudflare-one-gui/packaging" \
+        "$CRAFT_PART_INSTALL/usr/lib/cloudflare-one-gui/docs" \
+        "$CRAFT_PART_INSTALL/usr/lib/cloudflare-one-gui/.github" \
+        "$CRAFT_PART_INSTALL/usr/lib/cloudflare-one-gui/AGENTS.md"
+      install -d "$CRAFT_PART_INSTALL/bin" "$CRAFT_PART_INSTALL/share/applications" \
+        "$CRAFT_PART_INSTALL/share/icons/hicolor/scalable/apps"
+      cat > "$CRAFT_PART_INSTALL/bin/cloudflare-one-gui" <<'EOF'
+      #!/bin/bash
+      exec "$SNAP/usr/lib/cloudflare-one-gui/bin/cloudflare-one-gui" "$@"
+      EOF
+      chmod 0755 "$CRAFT_PART_INSTALL/bin/cloudflare-one-gui"
+      chmod 0755 "$CRAFT_PART_INSTALL/usr/lib/cloudflare-one-gui/bin/"*
+      install -m 0644 "$CRAFT_PART_SRC/packaging/cloudflare-one-gui.desktop" \
+        "$CRAFT_PART_INSTALL/share/applications/cloudflare-one-gui.desktop"
+      install -m 0644 "$CRAFT_PART_SRC/assets/cloudflare-one-gui.svg" \
+        "$CRAFT_PART_INSTALL/share/icons/hicolor/scalable/apps/cloudflare-one-gui.svg"
+    stage-packages:
+      - nodejs

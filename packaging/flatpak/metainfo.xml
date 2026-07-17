@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.cloudflare_one_gui_linux.CloudflareOneGui</id>
+  <name>Cloudflare One GUI</name>
+  <summary>Linux GUI for Cloudflare WARP via warp-cli</summary>
+  <metadata_license>MIT</metadata_license>
+  <project_license>MIT</project_license>
+  <description>
+    <p>
+      A local desktop-style GUI that wraps the host Cloudflare WARP client (warp-cli).
+      The Flatpak runs Node inside the sandbox and calls warp-cli on the host through
+      flatpak-spawn --host. Cloudflare WARP must already be installed on the system.
+    </p>
+  </description>
+  <launchable type="desktop-id">io.github.cloudflare_one_gui_linux.CloudflareOneGui.desktop</launchable>
+  <url type="homepage">https://github.com/brunner56/cloudflare-one-gui-linux</url>
+  <developer_name>Cloudflare One GUI for Linux contributors</developer_name>
+  <releases>
+    <release version="0.1.0" date="2026-07-17"/>
+  </releases>
+  <content_rating type="oars-1.1"/>
+</component>

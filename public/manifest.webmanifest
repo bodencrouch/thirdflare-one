@@ -1,0 +1,34 @@
+{
+  "name": "Cloudflare One GUI",
+  "short_name": "WARP GUI",
+  "description": "Linux desktop-style Cloudflare One and WARP manager backed by warp-cli.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone", "browser"],
+  "background_color": "#eef1f5",
+  "theme_color": "#f48120",
+  "categories": ["utilities", "security", "productivity"],
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Open WARP Status",
+      "short_name": "Status",
+      "url": "/#home",
+      "description": "Open the current WARP connection state."
+    },
+    {
+      "name": "Open Diagnostics",
+      "short_name": "Diagnostics",
+      "url": "/#diagnostics",
+      "description": "Open WARP diagnostics and raw command output."
+    }
+  ]
+}

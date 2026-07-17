@@ -1,0 +1,38 @@
+# Maintainer: Cloudflare One GUI for Linux contributors
+# Contributor: Cloudflare One GUI for Linux contributors
+pkgname=cloudflare-one-gui
+pkgver=__VERSION__
+pkgrel=1
+pkgdesc="Linux desktop-style GUI for managing Cloudflare WARP through warp-cli"
+arch=('any')
+url="https://github.com/brunner56/cloudflare-one-gui-linux"
+license=('MIT')
+depends=('nodejs>=20')
+optdepends=(
+  'yad: optional notification-area tray menu'
+  'libnotify: desktop notifications'
+  'cloudflare-warp-bin: Cloudflare WARP client providing warp-cli (AUR)'
+)
+source=("${pkgname}-${pkgver}.tar.gz::https://github.com/brunner56/cloudflare-one-gui-linux/archive/refs/tags/v${pkgver}.tar.gz")
+sha256sums=('SKIP')
+
+package() {
+  cd "${srcdir}/cloudflare-one-gui-linux-${pkgver}"
+
+  install -d "${pkgdir}/usr/lib/${pkgname}"
+  install -m 0644 server.js package.json "${pkgdir}/usr/lib/${pkgname}/"
+  cp -a public assets "${pkgdir}/usr/lib/${pkgname}/"
+  install -d "${pkgdir}/usr/lib/${pkgname}/scripts" "${pkgdir}/usr/lib/${pkgname}/bin"
+  install -m 0755 scripts/health-check.mjs scripts/port-open.mjs "${pkgdir}/usr/lib/${pkgname}/scripts/"
+  install -m 0755 bin/cloudflare-one-gui bin/cloudflare-one-tray "${pkgdir}/usr/lib/${pkgname}/bin/"
+
+  install -Dm755 packaging/usr-bin-wrapper.sh "${pkgdir}/usr/bin/cloudflare-one-gui"
+  install -Dm644 packaging/cloudflare-one-gui.desktop \
+    "${pkgdir}/usr/share/applications/cloudflare-one-gui.desktop"
+  install -Dm644 assets/cloudflare-one-gui.svg \
+    "${pkgdir}/usr/share/icons/hicolor/scalable/apps/cloudflare-one-gui.svg"
+  install -Dm644 packaging/cloudflare-one-gui.service \
+    "${pkgdir}/usr/lib/systemd/user/cloudflare-one-gui.service"
+  install -Dm644 LICENSE "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
+  install -Dm644 README.md "${pkgdir}/usr/share/doc/${pkgname}/README.md"
+}

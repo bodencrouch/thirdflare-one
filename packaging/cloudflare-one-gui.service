@@ -1,0 +1,15 @@
+[Unit]
+Description=Cloudflare One GUI local warp-cli server
+Documentation=https://github.com/brunner56/cloudflare-one-gui-linux
+After=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/usr/lib/cloudflare-one-gui
+Environment=PORT=4173
+ExecStart=/usr/bin/env node /usr/lib/cloudflare-one-gui/server.js
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=default.target

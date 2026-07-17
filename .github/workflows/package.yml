@@ -1,0 +1,366 @@
+name: Package
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to checkout/publish (e.g. v0.1.0). Empty uses current commit."
+        required: false
+        default: ""
+      publish_release:
+        description: "Upload artifacts to GitHub Release (requires existing tag)"
+        type: boolean
+        default: false
+      publish_ghcr:
+        description: "Push ghcr.io container images"
+        type: boolean
+        default: true
+      update_homebrew_tap:
+        description: "Update homebrew-tap branch with generated Formula"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  packages: write
+
+concurrency:
+  group: package-${{ github.event.release.tag_name || inputs.tag || github.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  resolve-version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.ver.outputs.version }}
+      tag: ${{ steps.ver.outputs.tag }}
+      checkout_ref: ${{ steps.ver.outputs.checkout_ref }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: ver
+        env:
+          INPUT_TAG: ${{ inputs.tag }}
+        run: |
+          if [[ -n "${{ github.event.release.tag_name }}" ]]; then
+            TAG="${{ github.event.release.tag_name }}"
+            CHECKOUT_REF="$TAG"
+          elif [[ -n "${INPUT_TAG}" ]]; then
+            if [[ ! "${INPUT_TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+              echo "Invalid tag format: ${INPUT_TAG}" >&2
+              exit 1
+            fi
+            TAG="${INPUT_TAG}"
+            CHECKOUT_REF="${INPUT_TAG}"
+          else
+            TAG="v$(node -p "require('./package.json').version")"
+            CHECKOUT_REF="${GITHUB_SHA}"
+          fi
+          VERSION="${TAG#v}"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "checkout_ref=$CHECKOUT_REF" >> "$GITHUB_OUTPUT"
+
+  deb-rpm-arch:
+    needs: resolve-version
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.resolve-version.outputs.checkout_ref }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install verify deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y rpm
+          docker version
+
+      - name: Build deb, rpm, arch
+        run: bash packaging/scripts/build-deb-rpm.sh all
+        env:
+          PACKAGE_VERSION: ${{ needs.resolve-version.outputs.version }}
+
+      - name: Verify deb/rpm/arch
+        run: bash packaging/scripts/verify-packages.sh deb-rpm
+        env:
+          PACKAGE_VERSION: ${{ needs.resolve-version.outputs.version }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: packages-nfpm
+          path: dist/packages/*
+          retention-days: 14
+
+  appimage:
+    needs: resolve-version
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.resolve-version.outputs.checkout_ref }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install AppImage dependencies
+        run: sudo apt-get update && sudo apt-get install -y libfuse2 file
+
+      - name: Build AppImage
+        run: bash packaging/scripts/build-appimage.sh
+        env:
+          PACKAGE_VERSION: ${{ needs.resolve-version.outputs.version }}
+
+      - name: Verify AppImage
+        run: bash packaging/scripts/verify-packages.sh appimage
+        env:
+          PACKAGE_VERSION: ${{ needs.resolve-version.outputs.version }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: packages-appimage
+          path: dist/packages/*.AppImage
+          retention-days: 14
+
+  source:
+    needs: resolve-version
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.resolve-version.outputs.checkout_ref }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Build source archives and PKGBUILD
+        run: |
+          bash packaging/scripts/build-source.sh
+          sed "s/__VERSION__/${PACKAGE_VERSION}/g" packaging/arch/PKGBUILD.in > dist/packages/PKGBUILD
+        env:
+          PACKAGE_VERSION: ${{ needs.resolve-version.outputs.version }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: packages-source
+          path: |
+            dist/packages/*.tar.gz
+            dist/packages/PKGBUILD
+          retention-days: 14
+
+  flatpak:
+    needs: resolve-version
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.resolve-version.outputs.checkout_ref }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install flatpak-builder
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y flatpak flatpak-builder elfutils
+          flatpak remote-add --if-not-exists --user flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+          flatpak install -y --user flathub \
+            org.freedesktop.Platform//24.08 \
+            org.freedesktop.Sdk//24.08
+
+      - name: Build Flatpak bundle
+        run: bash packaging/scripts/build-flatpak.sh
+        env:
+          PACKAGE_VERSION: ${{ needs.resolve-version.outputs.version }}
+
+      - name: Verify Flatpak
+        run: bash packaging/scripts/verify-packages.sh flatpak
+        env:
+          PACKAGE_VERSION: ${{ needs.resolve-version.outputs.version }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: packages-flatpak
+          path: dist/packages/*.flatpak
+          retention-days: 14
+
+  snap:
+    needs: resolve-version
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.resolve-version.outputs.checkout_ref }}
+
+      - name: Place snapcraft.yaml for snapcore/action-build
+        run: |
+          VERSION="${{ needs.resolve-version.outputs.version }}"
+          mkdir -p snap
+          sed "s/^version: .*/version: '${VERSION}'/" packaging/snap/snapcraft.yaml > snap/snapcraft.yaml
+
+      - uses: snapcore/action-build@v1
+        id: snapcraft
+        with:
+          snapcraft-args: --verbose
+
+      - name: Collect and verify snap artifact
+        run: |
+          mkdir -p dist/packages
+          VERSION="${{ needs.resolve-version.outputs.version }}"
+          DEST="dist/packages/cloudflare-one-gui_${VERSION}_amd64.snap"
+          SNAP_FILE="${{ steps.snapcraft.outputs.snap }}"
+          if [[ -n "$SNAP_FILE" && -f "$SNAP_FILE" ]]; then
+            cp "$SNAP_FILE" "$DEST"
+          else
+            shopt -s nullglob
+            for snap in *.snap; do
+              mv "$snap" "$DEST"
+              break
+            done
+          fi
+          bash packaging/scripts/verify-packages.sh snap
+        env:
+          PACKAGE_VERSION: ${{ needs.resolve-version.outputs.version }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: packages-snap
+          path: dist/packages/*.snap
+          retention-days: 14
+
+  docker:
+    needs: resolve-version
+    runs-on: ubuntu-latest
+    if: github.event_name == 'release' || inputs.publish_ghcr != false
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.resolve-version.outputs.checkout_ref }}
+
+      - name: Log in to ghcr.io
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push runtime image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository }}:latest
+            ghcr.io/${{ github.repository }}:${{ needs.resolve-version.outputs.version }}
+          labels: |
+            org.opencontainers.image.source=${{ github.repositoryUrl }}
+            org.opencontainers.image.version=${{ needs.resolve-version.outputs.version }}
+
+      - name: Build and push CI builder image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile.ci
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository }}-ci:latest
+            ghcr.io/${{ github.repository }}-ci:${{ needs.resolve-version.outputs.version }}
+
+  homebrew:
+    needs: [resolve-version, source]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.resolve-version.outputs.checkout_ref }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: packages-source
+          path: dist/packages
+
+      - name: Generate Homebrew formula
+        run: |
+          bash packaging/scripts/generate-homebrew-formula.sh "${{ needs.resolve-version.outputs.version }}"
+          test -f homebrew-tap/Formula/cloudflare-one-gui.rb
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: packages-homebrew
+          path: homebrew-tap/**/*
+          retention-days: 14
+
+      - name: Update homebrew-tap branch
+        if: github.event_name == 'release' || (inputs.publish_release && inputs.update_homebrew_tap)
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          FORMULA_TMP="$(mktemp)"
+          cp homebrew-tap/Formula/cloudflare-one-gui.rb "$FORMULA_TMP"
+          git fetch origin homebrew-tap || true
+          if git show-ref --verify --quiet refs/remotes/origin/homebrew-tap; then
+            git checkout homebrew-tap
+            git reset --hard origin/homebrew-tap
+          else
+            git checkout --orphan homebrew-tap
+            git rm -rf . 2>/dev/null || true
+          fi
+          mkdir -p Formula
+          cp "$FORMULA_TMP" Formula/cloudflare-one-gui.rb
+          rm -f "$FORMULA_TMP"
+          git add Formula/cloudflare-one-gui.rb
+          git commit -m "chore(homebrew): cloudflare-one-gui ${{ needs.resolve-version.outputs.version }}" || true
+          git push origin homebrew-tap --force
+
+  publish:
+    needs: [resolve-version, deb-rpm-arch, appimage, source, flatpak, snap, homebrew]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'release' || inputs.publish_release || github.event_name == 'workflow_dispatch'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          pattern: packages-*
+          merge-multiple: true
+
+      - name: Collect and checksum
+        run: |
+          mkdir -p dist/packages
+          find artifacts -type f -exec cp -t dist/packages {} +
+          ls -la dist/packages
+          bash packaging/scripts/checksums.sh
+        env:
+          PACKAGE_VERSION: ${{ needs.resolve-version.outputs.version }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: packages-all
+          path: |
+            dist/packages/*
+          retention-days: 30
+
+      - name: Upload to GitHub Release
+        if: github.event_name == 'release' || inputs.publish_release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ needs.resolve-version.outputs.tag }}
+        run: |
+          gh release upload "$TAG" dist/packages/* --clobber

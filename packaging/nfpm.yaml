@@ -1,0 +1,53 @@
+# yaml-language-server: $schema=https://nfpm.goreleaser.com/static/schema.json
+name: cloudflare-one-gui
+arch: all
+platform: linux
+version: ${VERSION}
+section: net
+priority: optional
+maintainer: Cloudflare One GUI for Linux contributors
+description: |-
+  Linux desktop-style GUI for managing Cloudflare WARP through warp-cli.
+  Requires Cloudflare WARP (warp-cli) installed on the host.
+  See https://developers.cloudflare.com/warp-client/get-started/linux/
+vendor: Cloudflare One GUI for Linux
+homepage: https://github.com/brunner56/cloudflare-one-gui-linux
+license: MIT
+contents:
+  - src: ./dist/payload/usr/lib/cloudflare-one-gui
+    dst: /usr/lib/cloudflare-one-gui
+  - src: ./dist/payload/usr/bin/cloudflare-one-gui
+    dst: /usr/bin/cloudflare-one-gui
+    file_info:
+      mode: 0755
+  - src: ./dist/payload/usr/share/applications/cloudflare-one-gui.desktop
+    dst: /usr/share/applications/cloudflare-one-gui.desktop
+  - src: ./dist/payload/usr/share/icons/hicolor/scalable/apps/cloudflare-one-gui.svg
+    dst: /usr/share/icons/hicolor/scalable/apps/cloudflare-one-gui.svg
+  - src: ./dist/payload/usr/lib/systemd/user/cloudflare-one-gui.service
+    dst: /usr/lib/systemd/user/cloudflare-one-gui.service
+  - src: ./dist/payload/usr/share/doc/cloudflare-one-gui
+    dst: /usr/share/doc/cloudflare-one-gui
+  - src: ./dist/payload/usr/share/licenses/cloudflare-one-gui
+    dst: /usr/share/licenses/cloudflare-one-gui
+depends:
+  - nodejs >= 20
+recommends:
+  - yad
+  - libnotify-bin
+overrides:
+  rpm:
+    depends:
+      - nodejs >= 20
+    recommends:
+      - yad
+      - libnotify
+  archlinux:
+    depends:
+      - nodejs
+    recommends:
+      - yad
+      - libnotify
+scripts:
+  postinstall: ./packaging/scripts/nfpm-postinstall.sh
+  postremove: ./packaging/scripts/nfpm-postremove.sh

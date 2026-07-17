@@ -1,0 +1,5 @@
+#!/bin/bash
+HERE="$(dirname "$(readlink -f "${0}")")"
+export PATH="${HERE}/usr/lib/cloudflare-one-gui/runtime/node/bin:${HERE}/usr/bin:${PATH}"
+export CLOUDFLARE_ONE_GUI_NODE="${HERE}/usr/lib/cloudflare-one-gui/runtime/node/bin/node"
+exec "${HERE}/usr/lib/cloudflare-one-gui/bin/cloudflare-one-gui" "$@"
