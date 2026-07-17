@@ -8,6 +8,7 @@ MANIFEST="${ROOT}/packaging/flatpak/io.github.cloudflare_one_gui_linux.Cloudflar
 BUILD_DIR="${ROOT}/packaging/flatpak/build"
 REPO_DIR="${ROOT}/packaging/flatpak/repo"
 APP_ID="io.github.cloudflare_one_gui_linux.CloudflareOneGui"
+METAINFO="${ROOT}/packaging/flatpak/metainfo.xml"
 
 mkdir -p "$OUT" "$BUILD_DIR" "$REPO_DIR"
 
@@ -21,10 +22,10 @@ flatpak remote-add --if-not-exists --user flathub https://dl.flathub.org/repo/fl
 flatpak install -y --user flathub org.freedesktop.Platform//24.08 org.freedesktop.Sdk//24.08
 
 # Patch metainfo release version for this build.
-sed -i "s/version=\"[0-9.][0-9.]*\"/version=\"${VERSION}\"/" \
-  "${ROOT}/packaging/flatpak/metainfo.xml"
+sed -i "s/version=\"[0-9.][0-9.]*\"/version=\"${VERSION}\"/" "$METAINFO"
 
-flatpak-builder --force-clean --user --repo="$REPO_DIR" "$BUILD_DIR" "$MANIFEST"
+flatpak-builder --force-clean --user --build-only "$BUILD_DIR" "$MANIFEST"
+flatpak build-export --no-appstream "$REPO_DIR" "$BUILD_DIR"
 flatpak build-bundle "$REPO_DIR" \
   "${OUT}/cloudflare-one-gui-${VERSION}-x86_64.flatpak" \
   "$APP_ID"

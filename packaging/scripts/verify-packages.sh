@@ -35,7 +35,8 @@ verify_deb_rpm() {
   grep -q '/usr/lib/cloudflare-one-gui/server.js' <<<"$rpm_list"
 
   if command -v tar >/dev/null 2>&1; then
-    tar -tf "$arch" | grep -q 'cloudflare-one-gui'
+    arch_contents="$(tar -tf "$arch")"
+    grep -q 'cloudflare-one-gui' <<<"$arch_contents"
   fi
 
   if command -v docker >/dev/null 2>&1; then
