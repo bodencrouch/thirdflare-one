@@ -19,7 +19,7 @@ modules:
     buildsystem: simple
     build-commands:
       - |
-        install -d /app/lib/node
+        install -d /app/lib/node /app/bin
         tar -xJf node-v20.18.1-linux-x64.tar.xz -C /app/lib/node --strip-components=1
         ln -s /app/lib/node/bin/node /app/bin/node
     sources:

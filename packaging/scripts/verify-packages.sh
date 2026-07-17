@@ -26,11 +26,13 @@ verify_deb_rpm() {
   require_file "$arch"
 
   dpkg-deb -I "$deb" >/dev/null
-  dpkg-deb -c "$deb" | grep -q '/usr/lib/cloudflare-one-gui/server.js'
-  dpkg-deb -c "$deb" | grep -q '/usr/bin/cloudflare-one-gui'
+  deb_contents="$(dpkg-deb -c "$deb")"
+  grep -q '/usr/lib/cloudflare-one-gui/server.js' <<<"$deb_contents"
+  grep -q '/usr/bin/cloudflare-one-gui' <<<"$deb_contents"
 
   rpm -qip "$rpm" >/dev/null
-  rpm -qlp "$rpm" | grep -q '/usr/lib/cloudflare-one-gui/server.js'
+  rpm_list="$(rpm -qlp "$rpm")"
+  grep -q '/usr/lib/cloudflare-one-gui/server.js' <<<"$rpm_list"
 
   if command -v tar >/dev/null 2>&1; then
     tar -tf "$arch" | grep -q 'cloudflare-one-gui'
