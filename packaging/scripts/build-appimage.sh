@@ -24,16 +24,15 @@ tmpdir="$(mktemp -d)"
 curl --connect-timeout 30 --max-time 600 -fsSL "$node_url" -o "${tmpdir}/${node_tarball}"
 echo "${node_sha256}  ${node_tarball}" | (cd "$tmpdir" && sha256sum -c -)
 tar -xJf "${tmpdir}/${node_tarball}" -C "$tmpdir"
-mkdir -p "${APPDIR}/usr/lib/cloudflare-one-gui/runtime"
-mv "${tmpdir}/node-v${NODE_VERSION}-linux-x64" "${APPDIR}/usr/lib/cloudflare-one-gui/runtime/node"
+mkdir -p "${APPDIR}/usr/lib/thirdflare/runtime"
+mv "${tmpdir}/node-v${NODE_VERSION}-linux-x64" "${APPDIR}/usr/lib/thirdflare/runtime/node"
 rm -rf "$tmpdir"
 
 install -m 0755 "${ROOT}/packaging/appimage/AppRun" "${APPDIR}/AppRun"
-install -m 0644 "${ROOT}/packaging/cloudflare-one-gui.desktop" "${APPDIR}/cloudflare-one-gui.desktop"
-# AppImage desktop entry must use AppRun-relative Exec.
-sed -i 's|^Exec=.*|Exec=cloudflare-one-gui|' "${APPDIR}/cloudflare-one-gui.desktop"
-install -m 0644 "${ROOT}/assets/cloudflare-one-gui.svg" "${APPDIR}/cloudflare-one-gui.svg"
-ln -sf cloudflare-one-gui.svg "${APPDIR}/.DirIcon"
+install -m 0644 "${ROOT}/packaging/thirdflare.desktop" "${APPDIR}/thirdflare.desktop"
+sed -i 's|^Exec=.*|Exec=thirdflare|' "${APPDIR}/thirdflare.desktop"
+install -m 0644 "${ROOT}/assets/thirdflare.svg" "${APPDIR}/thirdflare.svg"
+ln -sf thirdflare.svg "${APPDIR}/.DirIcon"
 
 tool_dir="$(mktemp -d)"
   curl --connect-timeout 30 --max-time 300 -fsSL -o "${tool_dir}/appimagetool" \
@@ -51,8 +50,8 @@ fi
 
 export ARCH
 export VERSION
-rm -f "${OUT}/cloudflare-one-gui-${VERSION}-${ARCH}.AppImage"
-"$APPIMAGETOOL" "$APPDIR" "${OUT}/cloudflare-one-gui-${VERSION}-${ARCH}.AppImage"
-chmod +x "${OUT}/cloudflare-one-gui-${VERSION}-${ARCH}.AppImage"
+rm -f "${OUT}/thirdflare-${VERSION}-${ARCH}.AppImage"
+"$APPIMAGETOOL" "$APPDIR" "${OUT}/thirdflare-${VERSION}-${ARCH}.AppImage"
+chmod +x "${OUT}/thirdflare-${VERSION}-${ARCH}.AppImage"
 rm -rf "$tool_dir"
-echo "Built ${OUT}/cloudflare-one-gui-${VERSION}-${ARCH}.AppImage"
+echo "Built ${OUT}/thirdflare-${VERSION}-${ARCH}.AppImage"

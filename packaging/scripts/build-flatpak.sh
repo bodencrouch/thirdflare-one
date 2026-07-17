@@ -28,7 +28,7 @@ flatpak-builder --force-clean --user --build-only "$BUILD_DIR" "$MANIFEST"
 flatpak build-finish "$BUILD_DIR"
 flatpak build-export "$REPO_DIR" "$BUILD_DIR"
 flatpak build-bundle "$REPO_DIR" \
-  "${OUT}/cloudflare-one-gui-${VERSION}-x86_64.flatpak" \
+  "${OUT}/thirdflare-${VERSION}-x86_64.flatpak" \
   "$APP_ID"
 
-echo "Built ${OUT}/cloudflare-one-gui-${VERSION}-x86_64.flatpak"
+echo "Built ${OUT}/thirdflare-${VERSION}-x86_64.flatpak"

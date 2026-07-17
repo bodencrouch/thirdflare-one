@@ -215,7 +215,7 @@ jobs:
         run: |
           mkdir -p dist/packages
           VERSION="${{ needs.resolve-version.outputs.version }}"
-          DEST="dist/packages/cloudflare-one-gui_${VERSION}_amd64.snap"
+          DEST="dist/packages/thirdflare_${VERSION}_amd64.snap"
           SNAP_FILE="${{ steps.snapcraft.outputs.snap }}"
           if [[ -n "$SNAP_FILE" && -f "$SNAP_FILE" ]]; then
             cp "$SNAP_FILE" "$DEST"

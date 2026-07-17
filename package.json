@@ -1,17 +1,17 @@
 {
-  "name": "cloudflare-one-gui-linux",
+  "name": "thirdflare",
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Linux desktop-style GUI for managing Cloudflare WARP through warp-cli.",
+  "description": "ThirdFlare — unofficial cross-platform Cloudflare One client via warp-cli.",
   "license": "MIT",
   "engines": {
     "node": ">=20"
   },
   "scripts": {
-    "dev": "node server.js",
+    "dev": "THIRDFLARE_WEBUI=1 node server.js",
     "start": "node server.js",
-    "check": "node --check server.js && node --check public/app.js && node --check public/service-worker.js && node --check scripts/health-check.mjs && node --check scripts/port-open.mjs && node --check scripts/ci-warp-integration.test.mjs",
+    "check": "node --check server.js && node --check lib/config.mjs && node --check public/app.js && node --check public/service-worker.js && node --check scripts/health-check.mjs && node --check scripts/port-open.mjs && node --check scripts/ci-warp-integration.test.mjs",
     "test:integration": "node --test scripts/ci-warp-integration.test.mjs",
     "test:warp:real": "bash scripts/ci-real-warp-smoke.sh",
     "install:desktop": "bash scripts/install-desktop-entry.sh",

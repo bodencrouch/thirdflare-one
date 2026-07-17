@@ -17,9 +17,9 @@ require_file() {
 }
 
 verify_deb_rpm() {
-  local deb="${OUT}/cloudflare-one-gui_${VERSION}_all.deb"
-  local rpm="${OUT}/cloudflare-one-gui-${VERSION}-1.noarch.rpm"
-  local arch="${OUT}/cloudflare-one-gui-${VERSION}-1-any.pkg.tar.zst"
+  local deb="${OUT}/thirdflare_${VERSION}_all.deb"
+  local rpm="${OUT}/thirdflare-${VERSION}-1.noarch.rpm"
+  local arch="${OUT}/thirdflare-${VERSION}-1-any.pkg.tar.zst"
 
   require_file "$deb"
   require_file "$rpm"
@@ -27,16 +27,16 @@ verify_deb_rpm() {
 
   dpkg-deb -I "$deb" >/dev/null
   deb_contents="$(dpkg-deb -c "$deb")"
-  grep -q '/usr/lib/cloudflare-one-gui/server.js' <<<"$deb_contents"
-  grep -q '/usr/bin/cloudflare-one-gui' <<<"$deb_contents"
+  grep -q '/usr/lib/thirdflare/server.js' <<<"$deb_contents"
+  grep -q '/usr/bin/thirdflare' <<<"$deb_contents"
 
   rpm -qip "$rpm" >/dev/null
   rpm_list="$(rpm -qlp "$rpm")"
-  grep -q '/usr/lib/cloudflare-one-gui/server.js' <<<"$rpm_list"
+  grep -q '/usr/lib/thirdflare/server.js' <<<"$rpm_list"
 
   if command -v tar >/dev/null 2>&1; then
     arch_contents="$(tar -tf "$arch")"
-    grep -q 'cloudflare-one-gui' <<<"$arch_contents"
+    grep -q 'thirdflare' <<<"$arch_contents"
   fi
 
   if command -v docker >/dev/null 2>&1; then
@@ -45,12 +45,12 @@ verify_deb_rpm() {
       apt-get update
       apt-get install -y --no-install-recommends ca-certificates curl
       dpkg --force-depends -i /pkg.deb
-      test -x /usr/bin/cloudflare-one-gui
-      test -f /usr/lib/cloudflare-one-gui/server.js
-      PORT=4173 node /usr/lib/cloudflare-one-gui/server.js &
+      test -x /usr/bin/thirdflare
+      test -f /usr/lib/thirdflare/server.js
+      PORT=4173 node /usr/lib/thirdflare/server.js &
       pid=$!
       sleep 2
-      curl -fsS http://127.0.0.1:4173/api/health | grep -q cloudflare-one-gui
+      curl -fsS http://127.0.0.1:4173/api/health | grep -q thirdflare
       kill $pid
     '
   else
@@ -59,13 +59,13 @@ verify_deb_rpm() {
 }
 
 verify_appimage() {
-  local appimage="${OUT}/cloudflare-one-gui-${VERSION}-x86_64.AppImage"
+  local appimage="${OUT}/thirdflare-${VERSION}-x86_64.AppImage"
   require_file "$appimage"
   file "$appimage" | grep -Eiq 'executable|AppImage|ELF'
   chmod +x "$appimage"
   # Extract-only validation when FUSE is unavailable.
   if "$appimage" --appimage-extract >/dev/null 2>&1; then
-    test -f squashfs-root/usr/lib/cloudflare-one-gui/server.js
+    test -f squashfs-root/usr/lib/thirdflare/server.js
     rm -rf squashfs-root
   else
     echo "AppImage extract skipped (FUSE unavailable); size/type check passed"
@@ -73,7 +73,7 @@ verify_appimage() {
 }
 
 verify_flatpak() {
-  local bundle="${OUT}/cloudflare-one-gui-${VERSION}-x86_64.flatpak"
+  local bundle="${OUT}/thirdflare-${VERSION}-x86_64.flatpak"
   require_file "$bundle"
   file "$bundle" | grep -qi 'data'
   if command -v flatpak >/dev/null 2>&1; then
@@ -82,7 +82,7 @@ verify_flatpak() {
 }
 
 verify_snap() {
-  local snap="${OUT}/cloudflare-one-gui_${VERSION}_amd64.snap"
+  local snap="${OUT}/thirdflare_${VERSION}_amd64.snap"
   require_file "$snap"
   file "$snap" | grep -Eiq 'Squashfs|snap'
 }

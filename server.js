@@ -3,10 +3,22 @@ import { createServer } from "node:http";
 import { readFile } from "node:fs/promises";
 import { extname, join, normalize } from "node:path";
 import { fileURLToPath } from "node:url";
+import {
+  APP_DISPLAY_NAME,
+  APP_ID,
+  clearSessionOverrides,
+  describeConfigSources,
+  effectiveBind,
+  getConfig,
+  reloadConfig,
+  setSessionOverrides
+} from "./lib/config.mjs";
 
 const root = fileURLToPath(new URL(".", import.meta.url));
 const publicRoot = join(root, "public");
-const port = Number(process.env.PORT || 4173);
+const config = reloadConfig();
+const port = Number(config.server?.port || 4173);
+const listenHost = effectiveBind(config);
 
 const MIME = {
   ".html": "text/html; charset=utf-8",
@@ -78,7 +90,7 @@ const FAMILIES = new Set(["full", "malware", "off"]);
 const MASQUE_OPTIONS = new Set(["h3-only", "h2-only", "h3-with-h2-fallback"]);
 
 function warpCliCommand() {
-  return process.env.WARP_CLI || "warp-cli";
+  return getConfig().warp?.cli || process.env.WARP_CLI || "warp-cli";
 }
 
 function spawnWarpCli(warpArgs, options = {}) {
@@ -318,8 +330,42 @@ async function handleApi(req, res, url) {
     if (req.method === "GET" && url.pathname === "/api/health") {
       json(res, 200, {
         ok: true,
-        app: "cloudflare-one-gui",
+        app: APP_ID,
+        name: APP_DISPLAY_NAME,
         generatedAt: new Date().toISOString()
+      });
+      return;
+    }
+
+    if (req.method === "GET" && url.pathname === "/api/config") {
+      const active = getConfig();
+      json(res, 200, {
+        ok: true,
+        config: active,
+        sources: describeConfigSources(),
+        effective: {
+          bind: effectiveBind(active),
+          port: Number(active.server?.port || port)
+        },
+        notes: {
+          restartRequired: ["server.port", "server.bind", "webui.allowRemote"],
+          sessionOnly: "POST /api/config/session overrides apply until the daemon restarts."
+        }
+      });
+      return;
+    }
+
+    if (req.method === "POST" && url.pathname === "/api/config/session") {
+      const body = await readJson(req);
+      if (body?.clear === true) {
+        clearSessionOverrides();
+      } else {
+        setSessionOverrides(body?.config || body);
+      }
+      json(res, 200, {
+        ok: true,
+        config: getConfig(),
+        sources: describeConfigSources()
       });
       return;
     }
@@ -403,6 +449,12 @@ async function handleApi(req, res, url) {
 }
 
 async function serveStatic(req, res, url) {
+  const active = getConfig();
+  if (!active.webui?.enabled && url.pathname !== "/" && !url.pathname.startsWith("/api/")) {
+    res.writeHead(503, { "content-type": "text/plain; charset=utf-8" });
+    res.end("ThirdFlare Web UI is disabled. Enable webui.enabled in config or the in-app Settings page.");
+    return;
+  }
   let pathname = decodeURIComponent(url.pathname);
   if (pathname === "/") pathname = "/index.html";
   const safePath = normalize(pathname).replace(/^(\.\.[/\\])+/, "");
@@ -432,6 +484,9 @@ createServer(async (req, res) => {
     return;
   }
   await serveStatic(req, res, url);
-}).listen(port, "127.0.0.1", () => {
-  console.log(`Cloudflare One GUI running at http://127.0.0.1:${port}`);
+}).listen(port, listenHost, () => {
+  console.log(`${APP_DISPLAY_NAME} running at http://${listenHost}:${port}`);
+  if (!getConfig().webui?.enabled) {
+    console.log("Web UI disabled (webui.enabled=false). API and launcher quick actions remain available.");
+  }
 });

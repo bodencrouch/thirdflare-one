@@ -143,8 +143,8 @@ function header() {
     <div class="brand">
       <div class="brand-mark" aria-hidden="true"><span></span></div>
       <div>
-        <div class="brand-title">Cloudflare One</div>
-        <div class="brand-subtitle">Linux WARP Manager</div>
+        <div class="brand-title">ThirdFlare</div>
+        <div class="brand-subtitle">Unofficial Cloudflare One · cross-platform</div>
       </div>
     </div>
     <div class="window-actions">

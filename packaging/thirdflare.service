@@ -1,5 +1,5 @@
 [Unit]
-Description=ThirdFlare Cloudflare One daemon (legacy unit name)
+Description=ThirdFlare Cloudflare One daemon (warp-cli API)
 Documentation=https://github.com/bodencrouch/cloudflare-one-gui-linux
 After=network-online.target
 

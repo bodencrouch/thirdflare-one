@@ -1,0 +1,154 @@
+# Configuration
+
+ThirdFlare uses layered configuration so operators can manage the daemon idiomatically on each platform while still allowing provisional overrides from the app.
+
+## Precedence (low → high)
+
+| Layer | Location | Typical use |
+|-------|----------|-------------|
+| 1. Defaults | in `lib/config.mjs` | Safe localhost-only baseline |
+| 2. System JSON | `/etc/thirdflare/config.json` | Fleet / machine policy |
+| 3. Environment file | `/etc/default/thirdflare` | Debian/RHEL-style `KEY=value` for systemd |
+| 4. User JSON | `~/.config/thirdflare/config.json` | Per-user preferences |
+| 5. Legacy user JSON | `~/.config/cloudflare-one-gui/config.json` | Migration from old name |
+| 6. Environment | `THIRDFLARE_*`, `WARP_CLI`, `PORT` | Containers, CI, drop-ins |
+| 7. Session | `POST /api/config/session` | In-app toggles until restart |
+
+Higher layers win on conflicting keys.
+
+## Config file schema
+
+Copy the example:
+
+```bash
+sudo install -d /etc/thirdflare
+sudo cp config/config.example.json /etc/thirdflare/config.json
+sudo cp packaging/thirdflare.default /etc/default/thirdflare
+```
+
+### `server`
+
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `port` | number | `4173` | HTTP listen port |
+| `bind` | string | `127.0.0.1` | Bind address when remote Web UI is off |
+
+### `webui`
+
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `enabled` | boolean | `false` | Serve static Web UI and PWA assets |
+| `allowRemote` | boolean | `false` | When enabled, bind `0.0.0.0` for LAN access |
+
+**Defaults:** systemd daemon runs with Web UI **off** (`THIRDFLARE_WEBUI=0`). Running `thirdflare` (no flags) exports `THIRDFLARE_WEBUI=1` for that process tree so the browser shell works locally.
+
+### `warp`
+
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `cli` | string | `warp-cli` | Path or name of the WARP CLI binary |
+
+Flatpak builds call `flatpak-spawn --host` automatically when `cli` is `warp-cli`.
+
+### `ui`
+
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `openBrowser` | boolean | `true` | Launcher opens a browser when starting GUI |
+| `theme` | string | `system` | Reserved for future theme sync |
+
+## Environment variables
+
+| Variable | Maps to | Example |
+|----------|---------|---------|
+| `THIRDFLARE_PORT` | `server.port` | `4173` |
+| `THIRDFLARE_BIND` | `server.bind` | `127.0.0.1` |
+| `THIRDFLARE_WEBUI` | `webui.enabled` | `1` / `0` |
+| `THIRDFLARE_WEBUI_ALLOW_REMOTE` | `webui.allowRemote` | `1` / `0` |
+| `THIRDFLARE_WARP_CLI` | `warp.cli` | `/usr/bin/warp-cli` |
+| `WARP_CLI` | `warp.cli` | CI mock scripts |
+
+Legacy `CLOUDFLARE_ONE_GUI_PORT` and `CLOUDFLARE_ONE_GUI_NODE` remain supported for migration.
+
+## systemd
+
+### User service (recommended for desktops)
+
+```bash
+npm run install:user-service
+systemctl --user enable --now thirdflare.service
+systemctl --user status thirdflare
+```
+
+Packaged path: `/usr/lib/systemd/user/thirdflare.service`
+
+The unit loads:
+
+```ini
+EnvironmentFile=-/etc/default/thirdflare
+Environment=THIRDFLARE_WEBUI=0
+```
+
+### Drop-in override (idiomatic)
+
+```bash
+systemctl --user edit thirdflare
+```
+
+Example drop-in:
+
+```ini
+[Service]
+Environment=THIRDFLARE_PORT=5000
+Environment=THIRDFLARE_WEBUI=1
+```
+
+Then:
+
+```bash
+systemctl --user daemon-reload
+systemctl --user restart thirdflare
+```
+
+### System-wide (optional)
+
+For shared machines, install unit files under `/etc/systemd/system/` and point `WorkingDirectory=/usr/lib/thirdflare`. Prefer `/etc/thirdflare/config.json` for policy so unprivileged users cannot override fleet settings without sudo.
+
+## In-app session overrides
+
+Inspect effective config:
+
+```bash
+curl -s http://127.0.0.1:4173/api/config | jq
+```
+
+Apply provisional overrides (lost on daemon restart unless written to disk separately):
+
+```bash
+curl -s -X POST http://127.0.0.1:4173/api/config/session \
+  -H 'content-type: application/json' \
+  -d '{"config":{"webui":{"enabled":true}}}'
+```
+
+Clear session overrides:
+
+```bash
+curl -s -X POST http://127.0.0.1:4173/api/config/session \
+  -H 'content-type: application/json' \
+  -d '{"clear":true}'
+```
+
+**Restart required** after changing `server.port`, `server.bind`, or `webui.allowRemote`.
+
+## Platform notes
+
+| OS | Idiomatic config |
+|----|------------------|
+| Linux (deb/rpm) | `/etc/default/thirdflare` + `/etc/thirdflare/config.json` |
+| Linux (user) | `~/.config/thirdflare/config.json` + user systemd |
+| macOS (Homebrew) | `~/.config/thirdflare/config.json` + `launchctl`/`brew services` (future) |
+| Container | `THIRDFLARE_*` env vars on `docker run` |
+
+## WARP / Cloudflare One settings
+
+ThirdFlare does **not** replace Cloudflare account policy or MDM. Device modes, split tunnels, Gateway IDs, and registration are still applied through `warp-cli` exactly as on Windows — ThirdFlare is a drop-in UI and automation layer, not a separate VPN implementation.

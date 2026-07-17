@@ -1,7 +1,6 @@
 # Packaging
 
-This project ships a zero-npm-dependency Node.js GUI that calls host `warp-cli`.
-Packages do **not** bundle Cloudflare WARP — install the official WARP client first:
+ThirdFlare ships as `thirdflare` packages (legacy `cloudflare-one-gui` wrapper included). Artifacts do **not** bundle Cloudflare WARP — install the official client first.
 https://developers.cloudflare.com/warp-client/get-started/linux/
 
 ## Formats

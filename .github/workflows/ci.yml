@@ -46,9 +46,9 @@ jobs:
 
       - name: Verify staged tree
         run: |
-          test -x dist/payload/usr/bin/cloudflare-one-gui
-          test -f dist/payload/usr/lib/cloudflare-one-gui/server.js
-          test -f dist/payload/usr/share/applications/cloudflare-one-gui.desktop
+          test -x dist/payload/usr/bin/thirdflare
+          test -f dist/payload/usr/lib/thirdflare/server.js
+          test -f dist/payload/usr/share/applications/thirdflare.desktop
 
   warp-integration:
     name: WARP integration (mock)

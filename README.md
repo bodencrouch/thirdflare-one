@@ -1,131 +1,128 @@
-# Cloudflare One GUI for Linux
+# ThirdFlare
 
-A local Windows-style Cloudflare One / WARP manager for Linux. The app wraps the installed `warp-cli` binary, shows current daemon state, and exposes WARP, Gateway DNS, tunnel, split tunnel, trusted network, registration, override, environment, and diagnostics workflows through a desktop-like GUI.
+**ThirdFlare** is an unofficial, third-party reimplementation of the [Cloudflare One](https://developers.cloudflare.com/cloudflare-one/) desktop experience (formerly branded around WARP on the client). Windows ships the only official full GUI today; Linux, macOS, and headless environments get `warp-cli` without a comparable app. ThirdFlare closes that gap with **drop-in `warp-cli` compatibility** — same daemon, same settings surface, same workflows — on every OS we package.
 
-The home view uses `warp-cli --listen status` for live connection updates and periodically refreshes the full snapshot for tunnel, DNS, account, and policy details.
+> **Not affiliated with Cloudflare.** ThirdFlare is community software that talks to your existing WARP install. Cloudflare trademarks belong to Cloudflare, Inc.
 
-The browser shell includes installable app metadata, an app icon, and a service worker for the static UI shell. Live WARP state and actions still require the local Node server because they call the real `warp-cli`.
+## Why “ThirdFlare”?
+
+Wordplay on **third-party** + **Cloudflare**. You keep the official WARP daemon; we provide the One-style control plane the other platforms never got.
+
+## Features
+
+- **Parity-first** — connect/disconnect, modes, Gateway DNS, split tunnel, trusted networks, registration, overrides, diagnostics, and more via guarded `warp-cli` execution.
+- **Cross-platform** — Linux packages (deb, rpm, Arch, AppImage, Flatpak, Snap), macOS Homebrew, container images, and portable source builds.
+- **Optional Web UI** — browser shell for the full desktop experience; **disabled by default** when the systemd daemon runs headless. Enable locally from the launcher or persistently in config.
+- **Idiomatic configuration** — systemd `EnvironmentFile`, `/etc/thirdflare/config.json`, user config, environment variables, and in-app session overrides with documented precedence.
+- **Safe by default** — localhost bind, redacted secrets in API output, no shell invocation of `warp-cli`, confirmation for destructive actions.
 
 ## Requirements
 
-- Linux with Cloudflare WARP installed.
-- `warp-cli` available on `PATH`.
-- Node.js 20 or newer.
-- A desktop browser for the current launcher path. Firefox is preferred when available; otherwise `xdg-open` is used.
+| Component | Notes |
+|-----------|--------|
+| Cloudflare WARP | Official client with `warp-cli` on `PATH` |
+| Node.js | 20+ on the host (bundled in AppImage / Flatflat / Snap where applicable) |
+| Browser | For the Web UI when enabled (Firefox preferred on Linux) |
 
-## Run Locally
+Platform install links:
+
+- [Linux](https://developers.cloudflare.com/warp-client/get-started/linux/)
+- [macOS](https://developers.cloudflare.com/warp-client/get-started/macos/)
+
+## Quick start
 
 ```bash
+# Development (Web UI enabled for localhost)
 npm run dev
+
+# Production-style launcher (opens Web UI)
+./bin/thirdflare
+
+# API-only daemon (Web UI off — default for systemd)
+./bin/thirdflare --no-open
 ```
 
-Open `http://127.0.0.1:4173`.
+Open `http://127.0.0.1:4173` when the Web UI is enabled.
 
-For a desktop-style launch:
+### CLI quick actions
 
 ```bash
-./bin/cloudflare-one-gui
+thirdflare --connect
+thirdflare --disconnect
+thirdflare --toggle
+thirdflare --warp-status
+thirdflare --tray          # optional yad tray
+thirdflare --status
+thirdflare --stop
 ```
 
-The launcher starts or reuses the local server, writes runtime state under `XDG_RUNTIME_DIR`, writes logs under `~/.cache/cloudflare-one-gui/`, and opens the GUI. It defaults to port `4173`; if that port is occupied by something else, it scans upward for a free local port.
+Legacy alias: `cloudflare-one-gui` → same binary.
 
-The launcher also supports quick actions:
+## Configuration overview
+
+Configuration merges in this order (low → high):
+
+1. Built-in defaults  
+2. `/etc/thirdflare/config.json`  
+3. `/etc/default/thirdflare` (systemd `EnvironmentFile`)  
+4. `~/.config/thirdflare/config.json`  
+5. Environment variables (`THIRDFLARE_*`)  
+6. In-app session overrides (`POST /api/config/session`) until daemon restart  
+
+See **[docs/CONFIGURATION.md](docs/CONFIGURATION.md)** for every key, systemd drop-ins, and examples.
+
+### Optional Web UI
+
+| Setting | Default | Meaning |
+|---------|---------|---------|
+| `webui.enabled` | `false` | Serve static UI + PWA shell |
+| `webui.allowRemote` | `false` | Bind `0.0.0.0` when enabled (LAN access) |
+
+The interactive launcher sets `THIRDFLARE_WEBUI=1` when opening the GUI. The systemd user service keeps the Web UI off so the daemon stays API-only until you opt in.
+
+## systemd user service
 
 ```bash
-./bin/cloudflare-one-gui --connect
-./bin/cloudflare-one-gui --disconnect
-./bin/cloudflare-one-gui --toggle
-./bin/cloudflare-one-gui --warp-status
-./bin/cloudflare-one-gui --tray
+npm run install:user-service   # writes ~/.config/systemd/user/thirdflare.service
+systemctl --user enable --now thirdflare.service
 ```
 
-`--tray` starts an optional `yad` notification-area menu when `yad` and a desktop display are available.
+Packaged installs also ship `/usr/lib/systemd/user/thirdflare.service` and `/etc/default/thirdflare`.
 
-## Desktop Menu Integration
+Persistent changes belong in config files or drop-ins:
 
 ```bash
-npm run install:desktop
+systemctl --user edit thirdflare
+# or edit /etc/thirdflare/config.json
 ```
 
-This installs `~/.local/share/applications/cloudflare-one-gui.desktop`.
-The desktop entry includes quick actions for Connect, Disconnect, Toggle, Status, and Tray.
+## Architecture
 
-Remove it with:
+ThirdFlare is a small Node HTTP server plus static Web UI that wraps `spawn('warp-cli', …)` (or `flatpak-spawn --host warp-cli` in Flatpak). Live status uses `warp-cli --listen status`; snapshots poll the same command surface as the Windows app.
 
-```bash
-npm run uninstall:desktop
-```
+Read **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** for API routes, config module layout, and platform matrix.
 
-## Optional User Service
+## Packages & CI
 
-Install a user systemd service file:
+Prebuilt artifacts publish on [GitHub Releases](../../releases). Formats, GHCR images, Homebrew tap, and manual workflow dispatch are documented in **[docs/PACKAGING.md](docs/PACKAGING.md)**.
 
 ```bash
-npm run install:user-service
-```
-
-When your user systemd manager is available, enable it with:
-
-```bash
-systemctl --user enable --now cloudflare-one-gui.service
-```
-
-Remove the service file with:
-
-```bash
-npm run uninstall:user-service
-```
-
-## Safety Notes
-
-The backend runs `warp-cli` directly with `spawn` (or `flatpak-spawn --host warp-cli` inside Flatpak); it does not invoke a shell. Registration IDs, device IDs, account IDs, public keys, and license values are redacted from API/UI output. Destructive actions such as deleting registration, resetting settings, or rotating keys require confirmation in the GUI.
-
-## Packages and CI/CD
-
-Prebuilt packages (`.deb`, `.rpm`, AppImage, Flatpak, Snap, source tarball) are published on [GitHub Releases](../../releases). See [docs/PACKAGING.md](docs/PACKAGING.md) for formats, install layout, and local `npm run package:*` commands.
-
-Releases are driven by [release-please](https://github.com/googleapis/release-please) from [Conventional Commits](https://www.conventionalcommits.org/) on `main` (`feat:`, `fix:`, `feat!:` / `BREAKING CHANGE:`). Merging the Release PR tags the version and triggers the packaging workflow.
-
-### CI testing (WARP connectivity)
-
-Every PR runs mock `warp-cli` integration tests (`npm run test:integration`) that exercise DNS resolution, `/api/health`, `/api/snapshot` (network/DNS debug), and guarded `/api/action` calls. Optionally trigger real WARP smoke on Ubuntu:
-
-```bash
-gh workflow run ci.yml -f real_warp=true
-```
-
-### Manual packaging run
-
-Build all formats, push GHCR images, and upload workflow artifacts:
-
-```bash
-gh workflow run package.yml --ref main
 gh workflow run package.yml --ref main -f publish_ghcr=true
+docker pull ghcr.io/bodencrouch/cloudflare-one-gui-linux:latest   # image name migrates with next release
+brew tap bodencrouch/cloudflare-one-gui-linux homebrew-tap
+brew install cloudflare-one-gui   # formula alias; becomes thirdflare over time
 ```
 
-### Container images (GHCR)
+## Roadmap gaps (honest)
 
-```bash
-docker pull ghcr.io/bodencrouch/cloudflare-one-gui-linux:latest
-docker run --rm -p 4173:4173 ghcr.io/bodencrouch/cloudflare-one-gui-linux:latest
-```
+| Area | Status |
+|------|--------|
+| Windows / native shells (Electron, Tauri, AppIndicator) | Planned — Web UI is v1 |
+| CSRF token on `/api/action` | Not yet — localhost trust model |
+| Persist in-app settings to `~/.config/thirdflare` | Session-only today; use config files for persistence |
+| Full parity matrix vs Windows One | Tracked in-app on Parity page |
 
-Mount or install host `warp-cli` when running the container — the image ships the API server only.
-
-### Homebrew (macOS)
-
-After a release with the Homebrew tap updated:
-
-```bash
-brew tap bodencrouch/cloudflare-one-gui-linux https://github.com/bodencrouch/cloudflare-one-gui-linux.git homebrew-tap
-brew install cloudflare-one-gui
-```
-
-Requires [Cloudflare WARP for macOS](https://developers.cloudflare.com/warp-client/get-started/macos/) so `warp-cli` is available.
-
-## Current Scope
-
-This is a functional local GUI layer, not a packaged native Electron/Tauri/WebKit application yet. Distro packages ship the Node server plus browser launcher. The Parity page tracks implemented Windows-like surfaces and remaining native gaps; the desktop entry provides quick actions and an optional `yad` tray while bundled AppIndicator/Electron/Tauri packaging remains future native work.
+Contributions welcome — especially native platform shells and parity audits.
 
 ## License
 

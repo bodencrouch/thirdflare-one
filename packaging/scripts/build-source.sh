@@ -22,6 +22,6 @@ tar -C "$ROOT" \
   --exclude='*.AppImage' \
   -czf "${OUT}/cloudflare-one-gui-${VERSION}-src.tar.gz" \
   server.js package.json LICENSE README.md CHANGELOG.md AGENTS.md \
-  public assets bin scripts packaging docs
+  lib config public assets bin scripts packaging docs
 
 echo "Built source archives in ${OUT}"
