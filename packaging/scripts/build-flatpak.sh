@@ -34,8 +34,8 @@ flatpak build-finish "$BUILD_DIR" \
   --socket=wayland \
   --socket=fallback-x11 \
   --device=dri \
-  --filesystem=xdg-run \
-  --filesystem=xdg-cache \
+  --filesystem=xdg-run/ \
+  --filesystem=xdg-cache/ \
   --talk-name=org.freedesktop.Flatpak \
   --talk-name=org.freedesktop.Notifications
 
