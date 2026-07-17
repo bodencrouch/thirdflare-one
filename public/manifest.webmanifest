@@ -1,7 +1,7 @@
 {
-  "name": "Cloudflare One GUI",
-  "short_name": "WARP GUI",
-  "description": "Linux desktop-style Cloudflare One and WARP manager backed by warp-cli.",
+  "name": "ThirdFlare One",
+  "short_name": "TF One",
+  "description": "Unofficial cross-platform Cloudflare One client backed by warp-cli.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

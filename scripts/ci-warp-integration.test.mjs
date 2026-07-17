@@ -56,7 +56,7 @@ async function waitForHealth(timeoutMs = 15000) {
   while (Date.now() - started < timeoutMs) {
     try {
       const res = await httpJson("GET", "/api/health");
-      if (res.status === 200 && res.json?.ok === true && res.json?.app === "cloudflare-one-gui") {
+      if (res.status === 200 && res.json?.ok === true && res.json?.app === "thirdflare") {
         return;
       }
     } catch {
@@ -102,7 +102,17 @@ test("/api/health returns app identity", async () => {
   const res = await httpJson("GET", "/api/health");
   assert.equal(res.status, 200);
   assert.equal(res.json.ok, true);
-  assert.equal(res.json.app, "cloudflare-one-gui");
+  assert.equal(res.json.app, "thirdflare");
+  assert.ok(res.json.version, "health should include semver");
+});
+
+test("/api/version returns channel and source", async () => {
+  const res = await httpJson("GET", "/api/version");
+  assert.equal(res.status, 200);
+  assert.equal(res.json.ok, true);
+  assert.ok(res.json.version);
+  assert.equal(res.json.channel, "stable");
+  assert.equal(res.json.source.owner, "bodencrouch");
 });
 
 test("/api/snapshot reports warp daemon and network debug", async () => {

@@ -1,0 +1,36 @@
+[Desktop Entry]
+Type=Application
+Name=ThirdFlare One
+Comment=Unofficial cross-platform Cloudflare One client for warp-cli
+Exec=thirdflare
+Icon=thirdflare
+Terminal=false
+Categories=Network;
+Keywords=Cloudflare;WARP;Zero Trust;ThirdFlare One;VPN;DNS;
+StartupNotify=true
+Actions=Connect;Disconnect;Toggle;Status;Tray;
+
+[Desktop Action Connect]
+Name=Connect WARP
+Exec=thirdflare --connect
+Icon=thirdflare
+
+[Desktop Action Disconnect]
+Name=Disconnect WARP
+Exec=thirdflare --disconnect
+Icon=thirdflare
+
+[Desktop Action Toggle]
+Name=Toggle WARP
+Exec=thirdflare --toggle
+Icon=thirdflare
+
+[Desktop Action Status]
+Name=Show WARP Status
+Exec=thirdflare
+Icon=thirdflare
+
+[Desktop Action Tray]
+Name=Start Tray Menu
+Exec=thirdflare --tray
+Icon=thirdflare

@@ -1,0 +1,26 @@
+{
+  "server": {
+    "port": 4173,
+    "bind": "127.0.0.1"
+  },
+  "webui": {
+    "enabled": false,
+    "allowRemote": false
+  },
+  "warp": {
+    "cli": "warp-cli"
+  },
+  "ui": {
+    "openBrowser": true,
+    "theme": "system",
+    "locale": "en"
+  },
+  "updates": {
+    "channel": "stable",
+    "source": {
+      "owner": "bodencrouch",
+      "repo": "cloudflare-one-gui-linux"
+    },
+    "checkOnStartup": true
+  }
+}
