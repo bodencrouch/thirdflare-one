@@ -13,10 +13,26 @@
     </p>
   </description>
   <launchable type="desktop-id">io.github.cloudflare_one_gui_linux.CloudflareOneGui.desktop</launchable>
-  <url type="homepage">https://github.com/brunner56/cloudflare-one-gui-linux</url>
-  <developer_name>Cloudflare One GUI for Linux contributors</developer_name>
+  <url type="homepage">https://github.com/bodencrouch/cloudflare-one-gui-linux</url>
+  <developer id="io.github.cloudflare_one_gui_linux">
+    <name>Cloudflare One GUI for Linux contributors</name>
+  </developer>
+  <categories>
+    <category>Network</category>
+    <category>Utility</category>
+  </categories>
   <releases>
-    <release version="0.1.0" date="2026-07-17"/>
+    <release version="0.1.0" date="2026-07-17">
+      <description>
+        <p>Initial packaging release.</p>
+      </description>
+    </release>
   </releases>
-  <content_rating type="oars-1.1"/>
+  <content_rating type="oars-1.1">
+    <content_attribute id="social-info">none</content_attribute>
+    <content_attribute id="social-audio">none</content_attribute>
+    <content_attribute id="social-chat">none</content_attribute>
+    <content_attribute id="social-contacts">none</content_attribute>
+    <content_attribute id="social-intended">everyone</content_attribute>
+  </content_rating>
 </component>

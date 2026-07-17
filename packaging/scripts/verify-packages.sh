@@ -39,11 +39,11 @@ verify_deb_rpm() {
   fi
 
   if command -v docker >/dev/null 2>&1; then
-    echo "Smoke installing .deb in Ubuntu container..."
-    docker run --rm -v "${deb}:/pkg.deb:ro" ubuntu:24.04 bash -euxo pipefail -c '
+    echo "Smoke installing .deb in container with Node 20..."
+    docker run --rm -v "${deb}:/pkg.deb:ro" node:20-bookworm-slim bash -euxo pipefail -c '
       apt-get update
-      apt-get install -y nodejs ca-certificates
-      dpkg -i /pkg.deb || apt-get install -f -y
+      apt-get install -y --no-install-recommends ca-certificates curl
+      dpkg --force-depends -i /pkg.deb
       test -x /usr/bin/cloudflare-one-gui
       test -f /usr/lib/cloudflare-one-gui/server.js
       PORT=4173 node /usr/lib/cloudflare-one-gui/server.js &

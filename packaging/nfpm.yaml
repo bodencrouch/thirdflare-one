@@ -11,7 +11,7 @@ description: |-
   Requires Cloudflare WARP (warp-cli) installed on the host.
   See https://developers.cloudflare.com/warp-client/get-started/linux/
 vendor: Cloudflare One GUI for Linux
-homepage: https://github.com/brunner56/cloudflare-one-gui-linux
+homepage: https://github.com/bodencrouch/cloudflare-one-gui-linux
 license: MIT
 contents:
   - src: ./dist/payload/usr/lib/cloudflare-one-gui
@@ -31,14 +31,17 @@ contents:
   - src: ./dist/payload/usr/share/licenses/cloudflare-one-gui
     dst: /usr/share/licenses/cloudflare-one-gui
 depends:
-  - nodejs >= 20
+  - nodejs
 recommends:
   - yad
   - libnotify-bin
 overrides:
+  deb:
+    depends:
+      - "nodejs (>= 20)"
   rpm:
     depends:
-      - nodejs >= 20
+      - "nodejs >= 20"
     recommends:
       - yad
       - libnotify
