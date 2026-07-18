@@ -1,4 +1,7 @@
 import assert from "node:assert/strict";
+import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { test } from "node:test";
 import {
   BOOTSTRAP_V4,
@@ -8,6 +11,13 @@ import {
   buildDisableScript,
   buildEnableScript
 } from "../lib/killswitch/rules.mjs";
+import {
+  clearSessionOverrides,
+  getConfig,
+  persistUserKillSwitch,
+  reloadConfig,
+  setSessionKillSwitch
+} from "../lib/config.mjs";
 
 test("enable script drops by default and allows lo + WARP + bootstrap", () => {
   const script = buildEnableScript({ allowLan: false, useDestroy: true });
@@ -35,4 +45,41 @@ test("enable script can allow LAN ranges", () => {
 test("disable script destroys or deletes the table", () => {
   assert.match(buildDisableScript({ useDestroy: true }), /destroy table inet/);
   assert.match(buildDisableScript({ useDestroy: false }), /delete table inet/);
+});
+
+test("persistUserKillSwitch writes user config and survives reload via HOME", () => {
+  const root = mkdtempSync(join(tmpdir(), "tf-ks-persist-"));
+  const userPath = join(root, ".config", "thirdflare", "config.json");
+  mkdirSync(join(root, ".config", "thirdflare"), { recursive: true });
+  writeFileSync(userPath, `${JSON.stringify({ ui: { locale: "en" } }, null, 2)}\n`);
+  const env = { ...process.env, HOME: root, THIRDFLARE_NOTIFICATIONS: "0" };
+
+  try {
+    clearSessionOverrides();
+    setSessionKillSwitch({ enabled: true, allowLan: true });
+    const cfg = persistUserKillSwitch({ enabled: true, allowLan: true }, { env });
+    assert.equal(cfg.warp.killSwitch, true);
+    assert.equal(cfg.warp.killSwitchAllowLan, true);
+
+    const onDisk = JSON.parse(readFileSync(userPath, "utf8"));
+    assert.equal(onDisk.ui.locale, "en");
+    assert.equal(onDisk.warp.killSwitch, true);
+    assert.equal(onDisk.warp.killSwitchAllowLan, true);
+
+    clearSessionOverrides();
+    const reloaded = reloadConfig(env);
+    assert.equal(reloaded.warp.killSwitch, true);
+    assert.equal(reloaded.warp.killSwitchAllowLan, true);
+    assert.equal(getConfig().warp.killSwitch, true);
+  } finally {
+    clearSessionOverrides();
+    reloadConfig(process.env);
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("persistUserKillSwitch ignores non-boolean enabled", () => {
+  const before = getConfig().warp.killSwitch;
+  persistUserKillSwitch({ enabled: "yes", allowLan: false });
+  assert.equal(getConfig().warp.killSwitch, before);
 });

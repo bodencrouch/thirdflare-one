@@ -47,8 +47,8 @@ sudo cp packaging/thirdflare.default /etc/default/thirdflare
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
 | `cli` | string | `warp-cli` | Path or name of the WARP CLI binary |
-| `killSwitch` | boolean | `false` | Apply ThirdFlare nftables kill switch on startup / via API |
-| `killSwitchAllowLan` | boolean | `false` | When kill switch is on, also allow RFC1918 / ULA LAN destinations |
+| `killSwitch` | boolean | `false` | Apply ThirdFlare nftables kill switch on startup / via API. **Persisted** to `~/.config/thirdflare/config.json` after a successful `POST /api/killswitch` |
+| `killSwitchAllowLan` | boolean | `false` | When kill switch is on, also allow RFC1918 / ULA LAN destinations (persisted with `killSwitch`) |
 
 Flatpak builds call `flatpak-spawn --host` automatically when `cli` is `warp-cli`.
 
@@ -157,7 +157,7 @@ Apply provisional overrides (lost on daemon restart unless written to disk separ
 
 Session may set `ui.locale` / `ui.theme` / `ui.openBrowser` / `ui.notifications` and `updates.channel` / `updates.checkOnStartup` via `/api/config/session`.  
 `updates.source` may only change through `POST /api/update/source`, which accepts the pinned upstream or one of its GitHub forks.  
-`warp.killSwitch` / `warp.killSwitchAllowLan` session state is set only by `POST /api/killswitch` after nftables apply succeeds (not via `/api/config/session`).  
+`warp.killSwitch` / `warp.killSwitchAllowLan` are written to the **user** config file by `POST /api/killswitch` after nftables apply succeeds (not via `/api/config/session`). Failed applies do not change the file. Fleet policy in `/etc/thirdflare/config.json` still loads first, but a later user file value for the same keys wins under normal precedence — treat UI toggles as per-user.  
 `warp.cli`, `server.*`, and `webui.*` are **not** session-overridable.
 
 ```bash

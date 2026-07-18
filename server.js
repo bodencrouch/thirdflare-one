@@ -14,7 +14,8 @@ import {
   reloadConfig,
   setSessionOverrides,
   setSessionUpdateSource,
-  setSessionKillSwitch
+  setSessionKillSwitch,
+  persistUserKillSwitch
 } from "./lib/config.mjs";
 import { getVersion, getVersionInfo } from "./lib/version.mjs";
 import { applyUpdate, checkForUpdate, prepareApply } from "./lib/update/index.mjs";
@@ -648,7 +649,7 @@ async function handleApi(req, res, url) {
         allowLan
       });
       if (result.ok) {
-        setSessionKillSwitch({ enabled: body.enabled, allowLan });
+        persistUserKillSwitch({ enabled: body.enabled, allowLan });
       } else {
         setSessionKillSwitch({ enabled: previousDesired, allowLan: previousAllowLan });
       }
