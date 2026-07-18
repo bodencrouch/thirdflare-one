@@ -1,6 +1,6 @@
 [Unit]
-Description=ThirdFlare One daemon (legacy unit name)
-Documentation=https://github.com/bodencrouch/cloudflare-one-gui-linux
+Description=ThirdFlare One daemon
+Documentation=https://github.com/bodencrouch/thirdflare-one
 After=network-online.target
 
 [Service]
