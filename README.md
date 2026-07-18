@@ -43,7 +43,7 @@ npm install
 
 export WARP_CLI="$PWD/scripts/mock-warp-cli.mjs"
 npm run check
-npm run test:all
+npm run test:all               # some tests require root, use sudo
 npm run dev                    # Web UI at http://127.0.0.1:4173
 ```
 
