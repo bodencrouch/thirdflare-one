@@ -4,6 +4,10 @@ on:
   workflow_run:
     workflows: [Package]
     types: [completed]
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/publish-stores.yml
   workflow_dispatch:
     inputs:
       version:
@@ -23,6 +27,7 @@ jobs:
     runs-on: ubuntu-latest
     if: >-
       github.event_name == 'workflow_dispatch' ||
+      github.event_name == 'push' ||
       github.event.workflow_run.conclusion == 'success'
     outputs:
       version: ${{ steps.ver.outputs.version }}
