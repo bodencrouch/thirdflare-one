@@ -67,4 +67,4 @@ modules:
       - type: git
         url: https://github.com/bodencrouch/thirdflare-one.git
         tag: v0.2.6
-        commit: 8aab40376718c8b31becababf370f50dbbd205a2
+        commit: 14570b1c13b50a52ea3d867b7781c2f0c3da9019
