@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Release version (e.g. 0.2.5). Empty uses package.json."
+        description: "Release version (e.g. 0.2.6). Empty uses package.json."
         required: false
         default: ""
 
@@ -47,6 +47,43 @@ jobs:
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "checkout_ref=$CHECKOUT_REF" >> "$GITHUB_OUTPUT"
 
+  check-secrets:
+    runs-on: ubuntu-latest
+    needs: resolve-version
+    outputs:
+      snap: ${{ steps.check.outputs.snap }}
+      aur: ${{ steps.check.outputs.aur }}
+      flathub: ${{ steps.check.outputs.flathub }}
+      appimagehub: ${{ steps.check.outputs.appimagehub }}
+    steps:
+      - id: check
+        env:
+          SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
+          AUR_SSH_PRIVATE_KEY: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
+          FLATHUB_PAT: ${{ secrets.FLATHUB_PAT }}
+          GH_PAT: ${{ secrets.GH_PAT }}
+        run: |
+          if [[ -n "${SNAPCRAFT_STORE_CREDENTIALS}" ]]; then
+            echo "snap=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "snap=false" >> "$GITHUB_OUTPUT"
+          fi
+          if [[ -n "${AUR_SSH_PRIVATE_KEY}" ]]; then
+            echo "aur=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "aur=false" >> "$GITHUB_OUTPUT"
+          fi
+          if [[ -n "${FLATHUB_PAT}" ]]; then
+            echo "flathub=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "flathub=false" >> "$GITHUB_OUTPUT"
+          fi
+          if [[ -n "${GH_PAT}" ]]; then
+            echo "appimagehub=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "appimagehub=false" >> "$GITHUB_OUTPUT"
+          fi
+
   download-artifacts:
     needs: resolve-version
     runs-on: ubuntu-latest
@@ -81,9 +118,9 @@ jobs:
           retention-days: 7
 
   publish-snap:
-    needs: [resolve-version, download-artifacts]
+    needs: [resolve-version, check-secrets, download-artifacts]
     runs-on: ubuntu-latest
-    if: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS != '' }}
+    if: needs.check-secrets.outputs.snap == 'true'
     steps:
       - uses: actions/checkout@v4
 
@@ -98,9 +135,9 @@ jobs:
         run: bash scripts/publish-snap.sh "${{ needs.resolve-version.outputs.version }}"
 
   publish-aur:
-    needs: [resolve-version, download-artifacts]
+    needs: [resolve-version, check-secrets, download-artifacts]
     runs-on: ubuntu-latest
-    if: ${{ secrets.AUR_SSH_PRIVATE_KEY != '' }}
+    if: needs.check-secrets.outputs.aur == 'true'
     steps:
       - uses: actions/checkout@v4
 
@@ -110,9 +147,9 @@ jobs:
         run: bash scripts/publish-aur.sh "${{ needs.resolve-version.outputs.version }}"
 
   publish-flathub-pr:
-    needs: resolve-version
+    needs: [resolve-version, check-secrets]
     runs-on: ubuntu-latest
-    if: ${{ secrets.FLATHUB_PAT != '' }}
+    if: needs.check-secrets.outputs.flathub == 'true'
     steps:
       - uses: actions/checkout@v4
         with:
@@ -126,9 +163,9 @@ jobs:
         run: bash scripts/publish-flathub-pr.sh "${{ needs.resolve-version.outputs.version }}"
 
   publish-appimagehub:
-    needs: [resolve-version, download-artifacts]
+    needs: [resolve-version, check-secrets, download-artifacts]
     runs-on: ubuntu-latest
-    if: ${{ secrets.GH_PAT != '' }}
+    if: needs.check-secrets.outputs.appimagehub == 'true'
     steps:
       - uses: actions/checkout@v4
 
