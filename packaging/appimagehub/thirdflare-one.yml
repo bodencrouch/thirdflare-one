@@ -1,0 +1,15 @@
+# AppImageHub listing — PR to https://github.com/AppImage/appimage.github.io
+#
+# Add under data/ as thirdflare-one.yml (or merge into existing structure per upstream docs).
+# Replace VERSION with release semver (e.g. 0.2.6).
+
+name: ThirdFlare One
+categories:
+  - Network
+  - Utility
+description: Unofficial Cloudflare One client via warp-cli
+installations:
+  - type: file
+    url: https://github.com/bodencrouch/thirdflare-one/releases/download/v0.2.6/thirdflare-0.2.6-x86_64.AppImage
+    sha256: REPLACE_WITH_SHA256_FROM_RELEASE_SHA256SUMS
+    arch: x86_64

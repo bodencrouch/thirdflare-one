@@ -1,0 +1,154 @@
+name: Publish to stores
+
+on:
+  workflow_run:
+    workflows: [Package]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release version (e.g. 0.2.5). Empty uses package.json."
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-stores-${{ github.event.workflow_run.id || github.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  resolve-version:
+    runs-on: ubuntu-latest
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'success'
+    outputs:
+      version: ${{ steps.ver.outputs.version }}
+      tag: ${{ steps.ver.outputs.tag }}
+      checkout_ref: ${{ steps.ver.outputs.checkout_ref }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+
+      - id: ver
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+        run: |
+          TAG="v$(node -p "require('./package.json').version")"
+          if [[ -n "${INPUT_VERSION}" ]]; then
+            TAG="v${INPUT_VERSION}"
+          fi
+          VERSION="${TAG#v}"
+          CHECKOUT_REF="${{ github.event.workflow_run.head_sha || github.sha }}"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "checkout_ref=$CHECKOUT_REF" >> "$GITHUB_OUTPUT"
+
+  download-artifacts:
+    needs: resolve-version
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p dist/packages
+          for attempt in $(seq 1 30); do
+            if gh release download "${{ needs.resolve-version.outputs.tag }}" \
+              --repo "${{ github.repository }}" \
+              --dir dist/packages \
+              --pattern 'thirdflare_*' \
+              --pattern 'thirdflare-*' \
+              --pattern 'SHA256SUMS' \
+              --clobber 2>/dev/null; then
+              echo "Downloaded release assets on attempt ${attempt}"
+              ls -la dist/packages/
+              exit 0
+            fi
+            echo "Waiting for release assets (attempt ${attempt}/30)..."
+            sleep 30
+          done
+          echo "Release assets not found for ${{ needs.resolve-version.outputs.tag }}" >&2
+          exit 1
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: store-publish-assets
+          path: dist/packages/*
+          retention-days: 7
+
+  publish-snap:
+    needs: [resolve-version, download-artifacts]
+    runs-on: ubuntu-latest
+    if: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS != '' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: store-publish-assets
+          path: dist/packages
+
+      - name: Publish to Snap Store
+        env:
+          SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
+        run: bash scripts/publish-snap.sh "${{ needs.resolve-version.outputs.version }}"
+
+  publish-aur:
+    needs: [resolve-version, download-artifacts]
+    runs-on: ubuntu-latest
+    if: ${{ secrets.AUR_SSH_PRIVATE_KEY != '' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Publish to AUR
+        env:
+          AUR_SSH_PRIVATE_KEY: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
+        run: bash scripts/publish-aur.sh "${{ needs.resolve-version.outputs.version }}"
+
+  publish-flathub-pr:
+    needs: resolve-version
+    runs-on: ubuntu-latest
+    if: ${{ secrets.FLATHUB_PAT != '' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ needs.resolve-version.outputs.checkout_ref }}
+
+      - name: Open Flathub manifest PR
+        env:
+          FLATHUB_PAT: ${{ secrets.FLATHUB_PAT }}
+          FLATHUB_FORK: ${{ vars.FLATHUB_FORK || 'bodencrouch/flathub' }}
+        run: bash scripts/publish-flathub-pr.sh "${{ needs.resolve-version.outputs.version }}"
+
+  publish-appimagehub:
+    needs: [resolve-version, download-artifacts]
+    runs-on: ubuntu-latest
+    if: ${{ secrets.GH_PAT != '' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: store-publish-assets
+          path: dist/packages
+
+      - name: Open AppImageHub listing PR
+        env:
+          GH_PAT: ${{ secrets.GH_PAT }}
+          APPIMAGEHUB_FORK: ${{ vars.APPIMAGEHUB_FORK || 'bodencrouch/appimage.github.io' }}
+        run: bash scripts/publish-appimagehub-pr.sh "${{ needs.resolve-version.outputs.version }}"
+
+  publish-copr-hint:
+    needs: resolve-version
+    runs-on: ubuntu-latest
+    steps:
+      - name: COPR / Packit note
+        run: |
+          echo "Fedora COPR builds are triggered by Packit on release when enabled."
+          echo "Enable Packit at https://packit.dev and COPR project bodencrouch/thirdflare-one"
+          echo "Spec: packaging/fedora/thirdflare-one.spec"

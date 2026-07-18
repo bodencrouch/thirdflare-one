@@ -108,6 +108,7 @@ Full contributor guide: **[docs/CONTRIBUTING.md](docs/CONTRIBUTING.md)**
 | [Configuration](docs/CONFIGURATION.md) | Config keys and environment variables |
 | [Architecture](docs/ARCHITECTURE.md) | HTTP API and codebase overview |
 | [Packaging](docs/PACKAGING.md) | Release artifacts and CI |
+| [Distribution](docs/DISTRIBUTION.md) | Flathub, Snap, COPR, AUR, AppImageHub |
 | [Updates](docs/UPDATES.md) | Update channels and manifest |
 | [CI](docs/CI.md) | Test confidence levels |
 
@@ -124,7 +125,9 @@ brew tap bodencrouch/thirdflare-one homebrew-tap
 brew install thirdflare-one
 ```
 
-See **[docs/PACKAGING.md](docs/PACKAGING.md)** for deb/rpm/Flatpak/Snap details and maintainer workflows.
+See **[docs/DISTRIBUTION.md](docs/DISTRIBUTION.md)** for Flathub, Snap Store, COPR, AUR, and AppImageHub install paths.
+
+See **[docs/PACKAGING.md](docs/PACKAGING.md)** for build details and maintainer workflows.
 
 ## Contributing
 

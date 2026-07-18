@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.6](https://github.com/bodencrouch/thirdflare-one/compare/v0.2.5...v0.2.6) (2026-07-18)
+
+
+### Features
+
+* add Linux store discoverability and publish automation
+* rename Flatpak app-id to `io.github.bodencrouch.ThirdFlareOne`
+* add Flathub, Snap, Fedora COPR (Packit), AUR, and AppImageHub packaging scaffolding
+* add `publish-stores.yml` workflow and publish helper scripts
+* add [docs/DISTRIBUTION.md](docs/DISTRIBUTION.md) install matrix per channel
+
 ## [0.2.4](https://github.com/bodencrouch/thirdflare-one/compare/v0.2.3...v0.2.4) (2026-07-18)
 
 

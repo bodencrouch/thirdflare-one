@@ -1,8 +1,16 @@
-app-id: io.github.cloudflare_one_gui_linux.CloudflareOneGui
+# Flathub submission manifest
+#
+# Copy or symlink this file into a PR against https://github.com/flathub/flathub
+# as: io.github.bodencrouch.ThirdFlareOne.yml
+#
+# Update `tag` and `commit` on each release (or use FLATHUB_PAT automation).
+
+app-id: io.github.bodencrouch.ThirdFlareOne
 runtime: org.freedesktop.Platform
 runtime-version: "24.08"
 sdk: org.freedesktop.Sdk
 command: thirdflare-one
+
 finish-args:
   - --share=network
   - --share=ipc
@@ -14,6 +22,7 @@ finish-args:
   - --filesystem=xdg-cache/
   - --talk-name=org.freedesktop.Flatpak
   - --talk-name=org.freedesktop.Notifications
+
 modules:
   - name: node
     buildsystem: simple
@@ -33,7 +42,8 @@ modules:
     build-commands:
       - |
         install -d /app/lib/thirdflare
-        cp -a server.js package.json public assets scripts bin /app/lib/thirdflare/
+        cp -a server.js package.json public assets scripts bin lib config /app/lib/thirdflare/
+        cp thirdflare-one /app/lib/thirdflare/ 2>/dev/null || true
         chmod 0755 /app/lib/thirdflare/bin/*
         install -d /app/bin
         cat > /app/bin/thirdflare-one <<'EOF'
@@ -44,25 +54,17 @@ modules:
         EOF
         chmod 0755 /app/bin/thirdflare-one
         install -Dm644 packaging/thirdflare-one.desktop \
-          /app/share/applications/io.github.cloudflare_one_gui_linux.CloudflareOneGui.desktop
+          /app/share/applications/io.github.bodencrouch.ThirdFlareOne.desktop
         sed -i \
           -e 's|^Exec=.*|Exec=thirdflare-one|' \
-          -e 's|^Icon=.*|Icon=io.github.cloudflare_one_gui_linux.CloudflareOneGui|' \
-          /app/share/applications/io.github.cloudflare_one_gui_linux.CloudflareOneGui.desktop
-        sed -i '/^\[Desktop Action/,/^$/ s|^Icon=.*|Icon=io.github.cloudflare_one_gui_linux.CloudflareOneGui|' \
-          /app/share/applications/io.github.cloudflare_one_gui_linux.CloudflareOneGui.desktop || true
+          -e 's|^Icon=.*|Icon=io.github.bodencrouch.ThirdFlareOne|' \
+          /app/share/applications/io.github.bodencrouch.ThirdFlareOne.desktop
         install -Dm644 assets/thirdflare.svg \
-          /app/share/icons/hicolor/scalable/apps/io.github.cloudflare_one_gui_linux.CloudflareOneGui.svg
+          /app/share/icons/hicolor/scalable/apps/io.github.bodencrouch.ThirdFlareOne.svg
         install -Dm644 packaging/flatpak/metainfo.xml \
-          /app/share/metainfo/io.github.cloudflare_one_gui_linux.CloudflareOneGui.metainfo.xml
+          /app/share/metainfo/io.github.bodencrouch.ThirdFlareOne.metainfo.xml
     sources:
-      - type: dir
-        path: ../..
-        skip:
-          - dist
-          - .git
-          - agentdecompile_projects
-          - node_modules
-          - packaging/flatpak/.flatpak-builder
-          - packaging/flatpak/repo
-          - packaging/flatpak/build
+      - type: git
+        url: https://github.com/bodencrouch/thirdflare-one.git
+        tag: v0.2.6
+        commit: 8aab40376718c8b31becababf370f50dbbd205a2

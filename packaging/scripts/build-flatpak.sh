@@ -4,10 +4,10 @@ set -euo pipefail
 ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)"
 VERSION="${PACKAGE_VERSION:-$(node -p "require('${ROOT}/package.json').version")}"
 OUT="${ROOT}/dist/packages"
-MANIFEST="${ROOT}/packaging/flatpak/io.github.cloudflare_one_gui_linux.CloudflareOneGui.yml"
+MANIFEST="${ROOT}/packaging/flatpak/io.github.bodencrouch.ThirdFlareOne.yml"
 BUILD_DIR="${ROOT}/packaging/flatpak/build"
 REPO_DIR="${ROOT}/packaging/flatpak/repo"
-APP_ID="io.github.cloudflare_one_gui_linux.CloudflareOneGui"
+APP_ID="io.github.bodencrouch.ThirdFlareOne"
 METAINFO="${ROOT}/packaging/flatpak/metainfo.xml"
 
 mkdir -p "$OUT" "$BUILD_DIR" "$REPO_DIR"

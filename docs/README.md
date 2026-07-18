@@ -10,6 +10,7 @@
 | Understand the architecture | [ARCHITECTURE.md](ARCHITECTURE.md) |
 | Build packages | [PACKAGING.md](PACKAGING.md) |
 | Understand updates | [UPDATES.md](UPDATES.md) |
+| Install from app stores | [DISTRIBUTION.md](DISTRIBUTION.md) |
 | Understand CI | [CI.md](CI.md) |
 
 ## Common commands

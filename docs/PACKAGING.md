@@ -35,6 +35,8 @@ gh workflow run package.yml --ref main -f tag=v0.1.0 -f publish_release=true -f 
 
 See [UPDATES.md](UPDATES.md) for Release Please and manifest sync.
 
+See [DISTRIBUTION.md](DISTRIBUTION.md) for Flathub, Snap Store, COPR, AUR, and AppImageHub channels.
+
 ## Container images (GHCR)
 
 ```bash

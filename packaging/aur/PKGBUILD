@@ -1,6 +1,6 @@
 # Maintainer: ThirdFlare One contributors
 pkgname=thirdflare-one
-pkgver=__VERSION__
+pkgver=0.2.5
 pkgrel=1
 pkgdesc="ThirdFlare One — unofficial Cloudflare One client via warp-cli"
 arch=('any')

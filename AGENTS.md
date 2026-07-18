@@ -19,6 +19,7 @@
 - `scripts/install-local.sh` — idempotent user install to `~/.local/share/thirdflare-one`.
 - `packaging/` — FHS staging, nfpm, AppImage, Flatpak, Snap, systemd units.
 - `docs/GETTING_STARTED.md`, `docs/CONTRIBUTING.md` — user setup and contributor guides.
+- `docs/DISTRIBUTION.md` — Flathub, Snap, COPR, AUR, AppImageHub channels.
 - `docs/CONFIGURATION.md`, `docs/ARCHITECTURE.md`, `docs/PACKAGING.md`, `docs/UPDATES.md`, `docs/CI.md`.
 - `docs/STRATEGY.md` — product strategy (control-plane CI, consumer-basic Account).
 - `scripts/mock-warp-cli.mjs` — portable stateful mock for Plane M CI.
