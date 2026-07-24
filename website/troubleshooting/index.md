@@ -1,0 +1,64 @@
+# Troubleshooting
+
+## Daemon won't start
+
+```bash
+thirdflare --status
+thirdflare --stop && thirdflare --no-open
+```
+
+Check warp-cli daemon:
+
+```bash
+warp-cli status
+```
+
+## Web UI 503
+
+Web UI disabled. Enable via config, session API, or:
+
+```bash
+THIRDFLARE_WEBUI=1 thirdflare --no-open
+```
+
+## Tray missing (KDE)
+
+```bash
+pip install PyQt6 PyQt6-WebEngine
+thirdflare-one-tray --check
+```
+
+Log out/in after first `.desktop` install. Confirm StatusNotifierItem is enabled in Plasma.
+
+## Stale UI / log dock wrong place
+
+Purge reinstall:
+
+```bash
+./thirdflare-one uninstall --purge
+./thirdflare-one install
+npm run verify:install
+```
+
+Service worker cache version bumps on release — hard refresh if needed.
+
+## Kill switch / polkit
+
+Applying nftables rules needs elevation. If pkexec fails, run from a polkit-enabled session or disable kill switch before debugging network.
+
+## NetworkManager access denied
+
+`nmcli connection load` may fail for system keyfiles. Use KDE **Import VPN connection** — see [KDE / NetworkManager](/guides/networkmanager).
+
+## OpenAPI / port confusion
+
+Example config uses port **4173**; launcher may use **3847**. Read `/api/config` for effective values.
+
+## Tests
+
+```bash
+npm run check
+npm run test:all
+```
+
+Report issues: [GitHub Issues](https://github.com/bodencrouch/thirdflare-one/issues).

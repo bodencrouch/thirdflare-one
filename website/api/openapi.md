@@ -1,0 +1,27 @@
+# OpenAPI
+
+Machine-readable contract: [`openapi/thirdflare-api.json`](https://github.com/bodencrouch/thirdflare-one/blob/main/openapi/thirdflare-api.json).
+
+## Validation
+
+Plane M runs `npm run test:openapi` against a live mock daemon. Drift between `server.js` routes and the spec fails CI.
+
+## Version field
+
+The `info.version` in OpenAPI tracks the API revision — compare with `lib/api-revision.mjs` and package semver when debugging mismatches.
+
+## Servers block
+
+Example config lists port `4173`; the launcher may use `3847`. Always read `/api/config` for the effective bind/port.
+
+## Extending
+
+When adding routes:
+
+1. Implement handler in `server.js`
+2. Extend `openapi/thirdflare-api.json`
+3. Add cases to `scripts/ci-openapi.test.mjs`
+
+## External tools
+
+Import the JSON into Insomnia, Postman, or Redocly for interactive exploration. For published docs, this site is the human-facing source of truth.
