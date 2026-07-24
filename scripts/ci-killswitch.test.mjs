@@ -23,6 +23,7 @@ import {
   ENROLLMENT_PAUSE_ACTIONS,
   getEnrollmentPauseState
 } from "../lib/killswitch/enroll-pause.mjs";
+import { probeKillSwitchActive } from "../lib/killswitch/apply.mjs";
 
 test("enable script drops by default and allows lo + WARP + bootstrap", () => {
   const script = buildEnableScript({ allowLan: false, useDestroy: true });
@@ -93,6 +94,13 @@ test("enrollment pause actions cover Zero Trust flows", () => {
   assert.ok(ENROLLMENT_PAUSE_ACTIONS.has("registerOrganization"));
   assert.ok(ENROLLMENT_PAUSE_ACTIONS.has("registrationToken"));
   assert.equal(getEnrollmentPauseState().paused, false);
+});
+
+test("probeKillSwitchActive is read-only and does not escalate to pkexec", async () => {
+  const env = { ...process.env, DISPLAY: ":0", WAYLAND_DISPLAY: "wayland-0" };
+  const probe = await probeKillSwitchActive(env);
+  assert.equal(probe.method, "nft");
+  assert.ok(probe.active === true || probe.active === false || probe.active === null);
 });
 
 test("beginEnrollmentPause is no-op when kill switch not desired", async () => {

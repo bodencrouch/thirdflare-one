@@ -34,6 +34,9 @@ function defaultState() {
     trustedSsids: [],
     dnsFallbacks: ["1.1.1.1"],
     dnsLog: false,
+    disabledForWifi: false,
+    disabledForEthernet: false,
+    localNetworkAccess: false,
     environment: "Normal",
     devices: [
       {
@@ -94,12 +97,16 @@ function statusText(state) {
 
 function settingsText(state) {
   return [
-      `Mode: ${state.mode}`,
+    `Mode: ${state.mode}`,
     `Gateway ID: ${state.gatewayId || "(none)"}`,
     `Support URL: https://example.com/support`,
     `Protocol: ${state.protocol}`,
     `DNS Families: ${state.families}`,
-    `MASQUE options: ${state.masqueOptions}`
+    `DNS logging: ${state.dnsLog ? "enabled" : "disabled"}`,
+    `MASQUE options: ${state.masqueOptions}`,
+    `Compliance Environment: ${state.environment}`,
+    `Disabled for Wifi: ${Boolean(state.disabledForWifi)}`,
+    `Disabled for Ethernet: ${Boolean(state.disabledForEthernet)}`
   ].join("\n");
 }
 
@@ -386,10 +393,44 @@ function main(argv = process.argv.slice(2)) {
       out = "mock-mdm";
       break;
     case "override":
-      out = "override: none";
+      if (sub === "local-network") {
+        if (sub2 === "show") {
+          out = state.localNetworkAccess
+            ? "Local network access is allowed"
+            : "No current access to local network";
+        } else if (sub2 === "allow") {
+          state.localNetworkAccess = true;
+          saveState(state);
+          out = ok();
+        } else if (sub2 === "stop") {
+          state.localNetworkAccess = false;
+          saveState(state);
+          out = ok();
+        } else out = ok();
+      } else out = "override: none";
       break;
     case "trusted":
-      if (sub === "ssid") {
+      if (sub === "wifi") {
+        if (sub2 === "enable") {
+          state.disabledForWifi = true;
+          saveState(state);
+          out = ok();
+        } else if (sub2 === "disable") {
+          state.disabledForWifi = false;
+          saveState(state);
+          out = ok();
+        } else out = ok();
+      } else if (sub === "ethernet") {
+        if (sub2 === "enable") {
+          state.disabledForEthernet = true;
+          saveState(state);
+          out = ok();
+        } else if (sub2 === "disable") {
+          state.disabledForEthernet = false;
+          saveState(state);
+          out = ok();
+        } else out = ok();
+      } else if (sub === "ssid") {
         if (sub2 === "list") out = state.trustedSsids.join("\n") || "";
         else if (sub2 === "add" && sub3) {
           if (!state.trustedSsids.includes(sub3)) state.trustedSsids.push(sub3);

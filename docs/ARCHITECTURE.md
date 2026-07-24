@@ -34,7 +34,10 @@ flowchart LR
 | `lib/config.mjs` | Layered configuration merge + session overrides |
 | `public/` | Web UI (PWA-capable), optional when `webui.enabled=false` |
 | `bin/thirdflare` | Launcher: port selection, daemon lifecycle, browser open |
-| `bin/thirdflare-tray` | Optional `yad` notification-area menu |
+| `bin/thirdflare-tray` | PyQt6 native shell (KDE/Wayland) + SNI/yad fallbacks; loads `/?shell=1` simple UI |
+| `scripts/tray-qt.py` | Embedded WebEngine window + system tray |
+| `scripts/thirdflare-nft-apply` | Polkit-scoped privileged helper for kill-switch nft apply |
+| `lib/tray/autostart.mjs` | XDG autostart desktop entry sync (`tray.autostart`) |
 | `lib/warp/status.mjs` | Shared `warp-cli` status parsing |
 | `lib/notify/` | Desktop notifications (`notify-send`) + status watcher |
 | `scripts/health-check.mjs` | Used by launcher and CI to verify `/api/health` |
@@ -55,6 +58,7 @@ When `ui.notifications` is true (default), `server.js` starts `lib/notify/status
 | `/api/snapshot` | GET | Aggregated `warp-cli` command output |
 | `/api/events` | GET | SSE stream from `warp-cli --listen status` |
 | `/api/action` | POST | Whitelisted mutations (`connect`, `setMode`, …) |
+| `/api/config/tray-autostart` | POST | Persist tray XDG autostart preference (Linux) |
 | `/api/killswitch` | GET/POST | nftables kill-switch desired/active (Linux) |
 | `/api/killswitch/enrollment-pause` | POST | Pause/resume KS around Zero Trust enrollment |
 | `/api/update/check` | GET | Channel/manifest/GitHub update check |
@@ -65,6 +69,16 @@ When `ui.notifications` is true (default), `server.js` starts `lib/notify/status
 | `/api/update/apply` | POST | Apply prepared AppImage update |
 
 Contract file: [`openapi/thirdflare-api.json`](../openapi/thirdflare-api.json). Secrets in command output are redacted before JSON serialization.
+
+## Always On (Linux)
+
+Windows Cloudflare One exposes **Always On** in the client. Linux `warp-cli` has no public equivalent. ThirdFlare implements **Always On (kill switch)** via nftables table `inet thirdflare_killswitch`:
+
+1. User toggles desired state → `POST /api/killswitch`
+2. `lib/killswitch/apply.mjs` writes a validated rules script and runs `pkexec thirdflare-nft-apply apply <file>` (or unprivileged `nft -f` when permitted)
+3. Polkit policy `com.thirdflare.one.nft-apply` scopes elevation to `/usr/lib/thirdflare/scripts/thirdflare-nft-apply`
+4. GET `/api/killswitch` probes with read-only `nft list` — never escalates privilege
+5. Zero Trust enrollment can pause rules via `lib/killswitch/enroll-pause.mjs` without clearing persisted desired state
 
 ## Configuration flow
 
@@ -94,9 +108,12 @@ Contract file: [`openapi/thirdflare-api.json`](../openapi/thirdflare-api.json). 
 
 ```
 /usr/bin/thirdflare
-/usr/bin/thirdflare-one-gui          # alias wrapper
+/usr/bin/thirdflare-one
+/usr/bin/thirdflare-one-tray
 /usr/lib/thirdflare/server.js
-/usr/lib/thirdflare/lib/config.mjs
+/usr/lib/thirdflare/scripts/tray-qt.py
+/usr/lib/thirdflare/scripts/thirdflare-nft-apply
+/usr/share/polkit-1/actions/com.thirdflare.one.policy
 /usr/lib/thirdflare/public/
 /etc/default/thirdflare
 /etc/thirdflare/config.json.example
@@ -115,11 +132,11 @@ See [CI.md](CI.md) for confidence levels and [PACKAGING.md](PACKAGING.md) for re
 
 ## Parity strategy
 
-The in-app **Parity** page maps Windows Cloudflare One screens to implemented `warp-cli` workflows. New surfaces should:
+ThirdFlare One maps Windows Cloudflare One workflows to `warp-cli` surfaces in the Web UI (expert mode) and a simplified native shell (Connectivity, Profile, etc.). New surfaces should:
 
 1. Add read commands to `COMMANDS` in `server.js`.
 2. Add guarded actions to `ACTIONS` / `actionArgs`.
 3. Extend `public/app.js` views.
 4. Document behavior in CHANGELOG.
 
-Native shells (Tauri/Electron) can embed the same API without forking WARP logic.
+Native PyQt6 shell embeds the same HTTP API (`/?shell=1` simple layout, expert toggle). Tauri/Electron remain optional follow-ups.

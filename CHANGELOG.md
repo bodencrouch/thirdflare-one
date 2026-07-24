@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Features
+
+- Linux native shell: PyQt6 tray + embedded Web UI with Cloudflare One Client–style simple layout (`/?shell=1`) and expert-mode toggle
+- First-class tray packaging: stage tray Python modules, `/usr/bin/thirdflare-one-tray`, PyQt6 recommends in deb/rpm/Fedora spec
+- Polkit-scoped kill switch: `thirdflare-nft-apply` helper + `com.thirdflare.one.policy`; GET `/api/killswitch` stays unprivileged
+- Opt-in tray autostart (`tray.autostart` config + `POST /api/config/tray-autostart`)
+- Always On (Linux) UX: kill switch labeled as Windows Always On equivalent in UI and docs
+- Split tunnel in-app guide (IP/domain routing vs per-app limitations)
+
 ## [0.2.7](https://github.com/bodencrouch/thirdflare-one/compare/v0.2.6...v0.2.7) (2026-07-18)
 
 

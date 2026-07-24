@@ -17,20 +17,24 @@ mkdir -p \
   "${PAYLOAD}/usr/lib/systemd/user" \
   "${PAYLOAD}/usr/share/doc/thirdflare" \
   "${PAYLOAD}/usr/share/licenses/thirdflare" \
+  "${PAYLOAD}/usr/share/polkit-1/actions" \
   "${PAYLOAD}/etc/thirdflare" \
   "${PAYLOAD}/etc/default"
 
 install -m 0644 "${ROOT}/server.js" "${LIB}/server.js"
 install -m 0644 "${ROOT}/package.json" "${LIB}/package.json"
-mkdir -p "${LIB}/lib/update" "${LIB}/lib/warp" "${LIB}/lib/notify" "${LIB}/lib/killswitch" "${LIB}/config"
+mkdir -p "${LIB}/lib/update" "${LIB}/lib/warp" "${LIB}/lib/notify" "${LIB}/lib/killswitch" "${LIB}/lib/tray" "${LIB}/config"
 install -m 0644 "${ROOT}/lib/config.mjs" "${LIB}/lib/config.mjs"
 install -m 0644 "${ROOT}/lib/version.mjs" "${LIB}/lib/version.mjs"
+install -m 0644 "${ROOT}/lib/tray/autostart.mjs" "${LIB}/lib/tray/autostart.mjs"
 install -m 0644 "${ROOT}/lib/warp/status.mjs" "${LIB}/lib/warp/status.mjs"
+install -m 0644 "${ROOT}/lib/warp/settings.mjs" "${LIB}/lib/warp/settings.mjs"
 install -m 0644 "${ROOT}/lib/warp/registration.mjs" "${LIB}/lib/warp/registration.mjs"
 install -m 0644 "${ROOT}/lib/killswitch/rules.mjs" "${LIB}/lib/killswitch/rules.mjs"
 install -m 0644 "${ROOT}/lib/killswitch/apply.mjs" "${LIB}/lib/killswitch/apply.mjs"
 install -m 0644 "${ROOT}/lib/killswitch/enroll-pause.mjs" "${LIB}/lib/killswitch/enroll-pause.mjs"
 install -m 0644 "${ROOT}/lib/killswitch/index.mjs" "${LIB}/lib/killswitch/index.mjs"
+install -m 0644 "${ROOT}/lib/killswitch/nft-script-validate.mjs" "${LIB}/lib/killswitch/nft-script-validate.mjs"
 install -m 0644 "${ROOT}/lib/notify/desktop.mjs" "${LIB}/lib/notify/desktop.mjs"
 install -m 0644 "${ROOT}/lib/notify/status-watcher.mjs" "${LIB}/lib/notify/status-watcher.mjs"
 install -m 0644 "${ROOT}/lib/update/semver.mjs" "${LIB}/lib/update/semver.mjs"
@@ -52,6 +56,11 @@ cp -a "${ROOT}/assets" "${LIB}/assets"
 mkdir -p "${LIB}/scripts" "${LIB}/bin"
 install -m 0755 "${ROOT}/scripts/health-check.mjs" "${LIB}/scripts/health-check.mjs"
 install -m 0755 "${ROOT}/scripts/port-open.mjs" "${LIB}/scripts/port-open.mjs"
+install -m 0755 "${ROOT}/scripts/thirdflare-nft-apply" "${LIB}/scripts/thirdflare-nft-apply"
+install -m 0755 "${ROOT}/scripts/tray-qt.py" "${LIB}/scripts/tray-qt.py"
+install -m 0755 "${ROOT}/scripts/tray-sni.py" "${LIB}/scripts/tray-sni.py"
+install -m 0755 "${ROOT}/scripts/tray_api.py" "${LIB}/scripts/tray_api.py"
+install -m 0755 "${ROOT}/scripts/sync-tray-autostart.mjs" "${LIB}/scripts/sync-tray-autostart.mjs"
 install -m 0755 "${ROOT}/bin/thirdflare" "${LIB}/bin/thirdflare"
 install -m 0755 "${ROOT}/bin/thirdflare-tray" "${LIB}/bin/thirdflare-tray"
 install -m 0755 "${ROOT}/bin/thirdflare-one-gui" "${LIB}/bin/thirdflare-one-gui"
@@ -60,10 +69,15 @@ install -m 0755 "${ROOT}/bin/thirdflare-one-tray" "${LIB}/bin/thirdflare-one-tra
 install -m 0755 "${ROOT}/packaging/usr-bin-wrapper.sh" "${PAYLOAD}/usr/bin/thirdflare"
 install -m 0755 "${ROOT}/packaging/usr-bin-alias-wrapper.sh" "${PAYLOAD}/usr/bin/thirdflare-one"
 install -m 0755 "${ROOT}/packaging/usr-bin-alias-wrapper.sh" "${PAYLOAD}/usr/bin/thirdflare-one-gui"
+install -m 0755 "${ROOT}/packaging/usr-bin-tray-wrapper.sh" "${PAYLOAD}/usr/bin/thirdflare-one-tray"
+install -m 0644 "${ROOT}/packaging/polkit/com.thirdflare.one.policy" \
+  "${PAYLOAD}/usr/share/polkit-1/actions/com.thirdflare.one.policy"
 install -m 0644 "${ROOT}/packaging/thirdflare-one.desktop" \
   "${PAYLOAD}/usr/share/applications/thirdflare-one.desktop"
 install -m 0644 "${ROOT}/assets/thirdflare.svg" \
   "${PAYLOAD}/usr/share/icons/hicolor/scalable/apps/thirdflare.svg"
+install -m 0644 "${ROOT}/packaging/thirdflare-one-tray.desktop" \
+  "${PAYLOAD}/usr/share/applications/thirdflare-one-tray.desktop"
 install -m 0644 "${ROOT}/packaging/thirdflare-one.service" \
   "${PAYLOAD}/usr/lib/systemd/user/thirdflare-one.service"
 

@@ -23,3 +23,5 @@ squashfs-root/
 *.flatpak
 *.pkg.tar.zst
 agentdecompile_projects/
+__pycache__/
+.git.broken-backup/

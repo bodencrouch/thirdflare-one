@@ -25,5 +25,8 @@
       "repo": "thirdflare-one"
     },
     "checkOnStartup": true
+  },
+  "tray": {
+    "autostart": false
   }
 }

@@ -8,29 +8,24 @@ Terminal=false
 Categories=Network;
 Keywords=Cloudflare;WARP;Zero Trust;ThirdFlare One;VPN;DNS;
 StartupNotify=true
-Actions=Connect;Disconnect;Toggle;Status;Tray;
+Actions=WarpConnection;Status;Tray;Panel;
 
-[Desktop Action Connect]
-Name=Connect WARP
-Exec=thirdflare-one --connect
-Icon=thirdflare
-
-[Desktop Action Disconnect]
-Name=Disconnect WARP
-Exec=thirdflare-one --disconnect
-Icon=thirdflare
-
-[Desktop Action Toggle]
-Name=Toggle WARP
-Exec=thirdflare-one --toggle
+[Desktop Action WarpConnection]
+Name=Connect or Disconnect WARP
+Exec=thirdflare-one --warp-action
 Icon=thirdflare
 
 [Desktop Action Status]
 Name=Show WARP Status
-Exec=thirdflare-one
+Exec=thirdflare-one --warp-status
 Icon=thirdflare
 
 [Desktop Action Tray]
-Name=Start Tray Menu
+Name=Start Tray and Control Panel
 Exec=thirdflare-one --tray
+Icon=thirdflare
+
+[Desktop Action Panel]
+Name=Open ThirdFlare One
+Exec=thirdflare-one --panel
 Icon=thirdflare
