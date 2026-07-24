@@ -44,7 +44,7 @@ usage() {
 ThirdFlare One — unofficial third-party Cloudflare One client
 
 Usage:
-  thirdflare                    Start/reuse the daemon and open the Web UI
+  thirdflare                    Start the native tray + app shell (same as thirdflare-one-tray)
   thirdflare --no-open          Start/reuse the daemon (API-only by default)
   thirdflare --status           Print daemon status
   thirdflare --stop             Stop the managed daemon
@@ -75,6 +75,26 @@ health_ok() {
   "$NODE_BIN" "$APP_DIR/scripts/health-check.mjs" "$URL/api/health" >/dev/null 2>&1
 }
 
+daemon_ready() {
+  "$NODE_BIN" "$APP_DIR/scripts/daemon-ready.mjs" "$URL/api/health" >/dev/null 2>&1
+}
+
+daemon_pid_matches_install() {
+  local pid cmdline
+  [[ -f "$PID_FILE" ]] || return 1
+  pid="$(cat "$PID_FILE" 2>/dev/null || true)"
+  [[ -n "$pid" ]] || return 1
+  cmdline="$(tr '\0' ' ' < "/proc/$pid/cmdline" 2>/dev/null || true)"
+  [[ -n "$cmdline" && "$cmdline" == *"$APP_DIR/server.js"* ]]
+}
+
+restart_stale_daemon() {
+  if is_running; then
+    kill "$(cat "$PID_FILE")" 2>/dev/null || true
+    rm -f "$PID_FILE"
+  fi
+}
+
 set_port() {
   PORT="$1"
   URL="http://${HOST}:${PORT}"
@@ -103,16 +123,12 @@ choose_port() {
 start_server() {
   choose_port
 
-  if health_ok; then
+  if daemon_ready && daemon_pid_matches_install; then
     return 0
   fi
 
-  if is_running && health_ok; then
-    return 0
-  fi
-
-  if is_running; then
-    kill "$(cat "$PID_FILE")" 2>/dev/null || true
+  if health_ok || is_running; then
+    restart_stale_daemon
   fi
 
   : > "$LOG_FILE"
@@ -253,10 +269,7 @@ case "${1:-}" in
     echo "$URL"
     ;;
   "")
-    export THIRDFLARE_WEBUI=1
-    start_server
-    open_gui
-    echo "ThirdFlare One opened at $URL"
+    exec "$APP_DIR/bin/thirdflare-tray"
     ;;
   *)
     usage >&2

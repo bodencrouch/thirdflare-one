@@ -31,6 +31,7 @@ function defaultState() {
     managed: false,
     splitIps: ["10.0.0.0/8"],
     splitHosts: ["example.com"],
+    splitMode: "exclude",
     trustedSsids: [],
     dnsFallbacks: ["1.1.1.1"],
     dnsLog: false,
@@ -264,7 +265,16 @@ function main(argv = process.argv.slice(2)) {
       break;
     case "tunnel":
       if (sub === "stats") out = "Tunnel bytes: 0";
-      else if (sub === "dump") out = "Tunnel dump: mock";
+      else if (sub === "dump") {
+        out = [
+          `Split tunnel mode: ${state.splitMode || "exclude"}`,
+          state.managed ? "Managed by Cloudflare device profile" : "Local consumer configuration",
+          "IP routes:",
+          ...state.splitIps.map((ip) => `  ${ip}`),
+          "Host routes:",
+          ...state.splitHosts.map((host) => `  ${host}`)
+        ].join("\n");
+      }
       else if (sub === "protocol") {
         if (sub2 === "set" && sub3) {
           state.protocol = sub3;

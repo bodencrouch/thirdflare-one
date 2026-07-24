@@ -30,7 +30,7 @@ rm -rf "$tmpdir"
 
 install -m 0755 "${ROOT}/packaging/appimage/AppRun" "${APPDIR}/AppRun"
 install -m 0644 "${ROOT}/packaging/thirdflare-one.desktop" "${APPDIR}/thirdflare-one.desktop"
-sed -i 's|^Exec=.*|Exec=thirdflare-one|' "${APPDIR}/thirdflare-one.desktop"
+sed -i 's|^Exec=.*|Exec=thirdflare-one-tray|' "${APPDIR}/thirdflare-one.desktop"
 install -m 0644 "${ROOT}/assets/thirdflare.svg" "${APPDIR}/thirdflare.svg"
 ln -sf thirdflare.svg "${APPDIR}/.DirIcon"
 

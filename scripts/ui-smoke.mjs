@@ -106,6 +106,8 @@ try {
 
   await page.locator("[data-nav='account']").click();
   await page.locator("[data-testid='account-register']").waitFor({ timeout: 20000 });
+  await page.locator("[data-nav='split']").click();
+  await page.getByText("Most traffic through WARP, bypass specific sites").waitFor({ timeout: 15000 });
   await httpJson("POST", "/api/action", { action: "deleteRegistration" });
   await page.reload({ waitUntil: "domcontentloaded" });
   await page.locator("[data-nav='account']").click();
