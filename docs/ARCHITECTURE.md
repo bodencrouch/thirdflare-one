@@ -56,6 +56,7 @@ When `ui.notifications` is true (default), `server.js` starts `lib/notify/status
 | `/api/config/session` | POST | Provisional in-app overrides |
 | `/api/account` | GET | Structured registration / account DTO |
 | `/api/snapshot` | GET | Aggregated `warp-cli` command output |
+| `/api/logs` | GET | In-memory ring buffer of recent `warp-cli` invocations (Console tab) |
 | `/api/events` | GET | SSE stream from `warp-cli --listen status` |
 | `/api/action` | POST | Whitelisted mutations (`connect`, `setMode`, …) |
 | `/api/config/tray-autostart` | POST | Persist tray XDG autostart preference (Linux) |

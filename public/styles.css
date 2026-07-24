@@ -256,6 +256,15 @@ select:focus-visible,
   min-width: 0;
   overflow: auto;
   padding: 24px;
+  flex: 1;
+  min-height: 0;
+}
+
+.main-column {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
 }
 
 .view-stack {
@@ -531,6 +540,43 @@ select:focus-visible,
 
 .routing-scenario-actions {
   margin-top: 10px;
+}
+
+.app-routing-panel {
+  margin-bottom: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px 14px;
+  background: #fffaf5;
+}
+
+.app-routing-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: flex-end;
+  margin-top: 10px;
+}
+
+.app-routing-pick {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: min(320px, 100%);
+}
+
+.app-routing-pick label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.app-routing-select {
+  min-width: min(320px, 100%);
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #fff;
 }
 
 .guide-lede {
@@ -810,8 +856,14 @@ button.switch[aria-checked="true"]::after {
   font-weight: 600;
 }
 
-.segmented button.selected,
-.segmented button:hover {
+.segmented button.selected {
+  color: var(--orange-dark);
+  border-color: #f48120;
+  background: #fff3e8;
+  box-shadow: inset 0 0 0 1px rgba(244, 129, 32, 0.35);
+}
+
+.segmented button:hover:not(.selected) {
   color: var(--orange-dark);
   border-color: #ffc38f;
   background: #fff6ef;
@@ -1064,11 +1116,11 @@ button.switch[aria-checked="true"]::after {
   background: #1f2937;
   color: #f9fafb;
   font-size: 12px;
-  line-height: 1.4;
+  line-height: 1.5;
   font-weight: 500;
   box-shadow: 0 10px 30px rgba(15, 23, 42, 0.28);
   pointer-events: none;
-  white-space: normal;
+  white-space: pre-line;
 }
 
 .nav-item.tip[data-tip]:hover::after,
@@ -1409,6 +1461,13 @@ body.simple-ui {
   background: #ffffff;
 }
 
+.simple-main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
 .simple-sidebar {
   display: flex;
   flex-direction: column;
@@ -1477,6 +1536,7 @@ body.simple-ui {
   padding: 28px 36px 40px;
   overflow: auto;
   min-height: 0;
+  flex: 1;
 }
 
 .simple-page-head {
@@ -1576,5 +1636,232 @@ body.simple-ui {
   font-weight: 500;
   color: var(--muted);
   max-width: 60%;
+}
+
+.log-dock {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  border-top: 1px solid var(--line);
+  background: #f8f9fb;
+  min-height: 36px;
+}
+
+.log-dock.collapsed {
+  height: auto !important;
+}
+
+.log-dock-resize {
+  height: 5px;
+  cursor: ns-resize;
+  background: linear-gradient(#eef1f5, #e4e8ee);
+  flex-shrink: 0;
+}
+
+.log-dock.collapsed .log-dock-resize {
+  display: none;
+}
+
+.log-dock-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 4px 10px;
+  border-bottom: 1px solid var(--line);
+  background: #ffffff;
+}
+
+.log-dock-tabs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.log-dock-tab {
+  height: 28px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.log-dock-tab:hover {
+  background: #eef1f5;
+  color: var(--text);
+}
+
+.log-dock-tab.active {
+  background: #fff3e8;
+  color: var(--orange-dark);
+}
+
+.log-dock-collapse {
+  font-size: 12px;
+}
+
+.log-dock-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 8px 10px 10px;
+}
+
+.log-dock-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 6px;
+}
+
+.log-dock-clear {
+  font-size: 12px;
+}
+
+.log-status-pre {
+  margin: 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  max-height: 100%;
+  overflow: auto;
+}
+
+.log-status-line {
+  padding: 1px 0;
+}
+
+.log-status-line.error {
+  color: #c0392b;
+}
+
+.log-status-line.seed {
+  color: var(--muted);
+}
+
+.log-ts {
+  color: var(--muted);
+  margin-right: 8px;
+}
+
+.log-console-empty {
+  margin: 8px 0;
+}
+
+.log-console-entry {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  margin-bottom: 8px;
+  overflow: hidden;
+}
+
+.log-console-entry.fail {
+  border-color: #f0c4c4;
+}
+
+.log-console-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--line);
+  font-size: 12px;
+}
+
+.log-console-time {
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.log-console-cmd {
+  flex: 1;
+  min-width: 140px;
+  font-size: 11px;
+}
+
+.log-console-meta {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.log-console-body {
+  padding: 8px 10px;
+}
+
+.log-console-body.collapsed {
+  display: none;
+}
+
+.log-console-output {
+  margin: 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 11px;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  max-height: 160px;
+  overflow: auto;
+}
+
+.log-console-actions {
+  display: flex;
+  gap: 8px;
+  padding: 0 10px 8px;
+}
+
+.log-diagnostics-stack {
+  display: grid;
+  gap: 12px;
+}
+
+.log-diagnostics-stack .metrics-row {
+  flex-wrap: wrap;
+}
+
+.log-diagnostics-stack .panel {
+  margin: 0;
+}
+
+body.simple-ui .log-dock {
+  border-top-color: var(--line);
+}
+
+body.simple-ui #app {
+  padding: 0;
+  min-height: 100vh;
+}
+
+body.simple-ui .simple-shell {
+  width: 100%;
+  min-height: 100vh;
+}
+
+body.native-shell {
+  overflow: hidden;
+}
+
+body.native-shell #app {
+  padding: 0;
+  height: 100vh;
+  overflow: hidden;
+}
+
+body.native-shell .window-shell {
+  width: 100%;
+  height: 100vh;
+  min-height: 0;
+  margin: 0;
+  border-radius: 0;
+  box-shadow: none;
+  border: 0;
+}
+
+body.native-shell.simple-ui .simple-shell {
+  height: 100vh;
 }
 

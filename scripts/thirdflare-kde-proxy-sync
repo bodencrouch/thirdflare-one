@@ -1,0 +1,55 @@
+#!/usr/bin/env bash
+# Sync KDE / Plasma system proxy with ThirdFlare WARP local proxy mode.
+set -euo pipefail
+
+MODE="${1:-}"
+PORT="${2:-40000}"
+PROXY_HOST="127.0.0.1:${PORT}"
+
+kwriteconfig() {
+  if command -v kwriteconfig6 >/dev/null 2>&1; then
+    kwriteconfig6 "$@"
+  elif command -v kwriteconfig5 >/dev/null 2>&1; then
+    kwriteconfig5 "$@"
+  else
+    return 1
+  fi
+}
+
+apply_proxy_on() {
+  kwriteconfig --file kiosktarc --group "Proxy Settings" --key ProxyType 1
+  kwriteconfig --file kiosktarc --group "Proxy Settings" --key http_proxy "$PROXY_HOST"
+  kwriteconfig --file kiosktarc --group "Proxy Settings" --key https_proxy "$PROXY_HOST"
+  kwriteconfig --file kiosktarc --group "Proxy Settings" --key ftp_proxy "$PROXY_HOST"
+  kwriteconfig --file kiosktarc --group "Proxy Settings" --key socks_proxy "$PROXY_HOST"
+  kwriteconfig --file kiosktarc --group "Proxy Settings" --key NoProxyFor "localhost,127.0.0.0/8,::1"
+  if command -v dbus-send >/dev/null 2>&1; then
+    dbus-send --type=signal /KIO/Scheduler org.kde.KIO.Scheduler.reparseSlaveConfiguration string:"" 2>/dev/null || true
+  fi
+}
+
+apply_proxy_off() {
+  kwriteconfig --file kiosktarc --group "Proxy Settings" --key ProxyType 0
+  if command -v dbus-send >/dev/null 2>&1; then
+    dbus-send --type=signal /KIO/Scheduler org.kde.KIO.Scheduler.reparseSlaveConfiguration string:"" 2>/dev/null || true
+  fi
+}
+
+case "$MODE" in
+  on)
+    if ! kwriteconfig --help >/dev/null 2>&1; then
+      exit 2
+    fi
+    apply_proxy_on
+    ;;
+  off)
+    if ! kwriteconfig --help >/dev/null 2>&1; then
+      exit 2
+    fi
+    apply_proxy_off
+    ;;
+  *)
+    echo "Usage: $(basename "$0") on|off [port]" >&2
+    exit 2
+    ;;
+esac

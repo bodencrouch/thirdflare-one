@@ -23,12 +23,16 @@ mkdir -p \
 
 install -m 0644 "${ROOT}/server.js" "${LIB}/server.js"
 install -m 0644 "${ROOT}/package.json" "${LIB}/package.json"
-mkdir -p "${LIB}/lib/update" "${LIB}/lib/warp" "${LIB}/lib/notify" "${LIB}/lib/killswitch" "${LIB}/lib/tray" "${LIB}/config"
+mkdir -p "${LIB}/lib/update" "${LIB}/lib/warp" "${LIB}/lib/notify" "${LIB}/lib/killswitch" "${LIB}/lib/tray" "${LIB}/lib/apps" "${LIB}/lib/networkmanager" "${LIB}/config"
 install -m 0644 "${ROOT}/lib/config.mjs" "${LIB}/lib/config.mjs"
 install -m 0644 "${ROOT}/lib/version.mjs" "${LIB}/lib/version.mjs"
 install -m 0644 "${ROOT}/lib/tray/autostart.mjs" "${LIB}/lib/tray/autostart.mjs"
 install -m 0644 "${ROOT}/lib/warp/status.mjs" "${LIB}/lib/warp/status.mjs"
 install -m 0644 "${ROOT}/lib/warp/settings.mjs" "${LIB}/lib/warp/settings.mjs"
+install -m 0644 "${ROOT}/lib/warp/command-log.mjs" "${LIB}/lib/warp/command-log.mjs"
+install -m 0644 "${ROOT}/lib/apps/proxy-launcher.mjs" "${LIB}/lib/apps/proxy-launcher.mjs"
+install -m 0644 "${ROOT}/lib/networkmanager/profiles.mjs" "${LIB}/lib/networkmanager/profiles.mjs"
+install -m 0644 "${ROOT}/lib/networkmanager/sync.mjs" "${LIB}/lib/networkmanager/sync.mjs"
 install -m 0644 "${ROOT}/lib/warp/registration.mjs" "${LIB}/lib/warp/registration.mjs"
 install -m 0644 "${ROOT}/lib/killswitch/rules.mjs" "${LIB}/lib/killswitch/rules.mjs"
 install -m 0644 "${ROOT}/lib/killswitch/apply.mjs" "${LIB}/lib/killswitch/apply.mjs"
@@ -61,6 +65,10 @@ install -m 0755 "${ROOT}/scripts/tray-qt.py" "${LIB}/scripts/tray-qt.py"
 install -m 0755 "${ROOT}/scripts/tray-sni.py" "${LIB}/scripts/tray-sni.py"
 install -m 0755 "${ROOT}/scripts/tray_api.py" "${LIB}/scripts/tray_api.py"
 install -m 0755 "${ROOT}/scripts/sync-tray-autostart.mjs" "${LIB}/scripts/sync-tray-autostart.mjs"
+install -m 0755 "${ROOT}/scripts/sync-nm-profiles.mjs" "${LIB}/scripts/sync-nm-profiles.mjs"
+install -m 0755 "${ROOT}/scripts/thirdflare-nm" "${LIB}/scripts/thirdflare-nm"
+install -m 0755 "${ROOT}/scripts/thirdflare-warp-connect" "${LIB}/scripts/thirdflare-warp-connect"
+install -m 0755 "${ROOT}/scripts/thirdflare-kde-proxy-sync" "${LIB}/scripts/thirdflare-kde-proxy-sync"
 install -m 0755 "${ROOT}/bin/thirdflare" "${LIB}/bin/thirdflare"
 install -m 0755 "${ROOT}/bin/thirdflare-tray" "${LIB}/bin/thirdflare-tray"
 install -m 0755 "${ROOT}/bin/thirdflare-one-gui" "${LIB}/bin/thirdflare-one-gui"
@@ -80,6 +88,21 @@ install -m 0644 "${ROOT}/packaging/thirdflare-one-tray.desktop" \
   "${PAYLOAD}/usr/share/applications/thirdflare-one-tray.desktop"
 install -m 0644 "${ROOT}/packaging/thirdflare-one.service" \
   "${PAYLOAD}/usr/lib/systemd/user/thirdflare-one.service"
+
+mkdir -p \
+  "${PAYLOAD}/usr/share/thirdflare-one/networkmanager/profiles" \
+  "${PAYLOAD}/etc/NetworkManager/dispatcher.d" \
+  "${PAYLOAD}/etc/sysctl.d" \
+  "${PAYLOAD}/usr/lib/NetworkManager/VPN"
+install -m 0755 "${ROOT}/packaging/networkmanager/99-thirdflare-warp" \
+  "${PAYLOAD}/etc/NetworkManager/dispatcher.d/99-thirdflare-warp"
+install -m 0644 "${ROOT}/packaging/sysctl/99-thirdflare-warp.conf" \
+  "${PAYLOAD}/etc/sysctl.d/99-thirdflare-warp.conf"
+install -m 0644 "${ROOT}/packaging/networkmanager/nm-thirdflare-warp-service.name" \
+  "${PAYLOAD}/usr/lib/NetworkManager/VPN/nm-thirdflare-warp-service.name"
+THIRDFLARE_NM_SHARE="${PAYLOAD}/usr/share/thirdflare-one/networkmanager/profiles" \
+THIRDFLARE_NM_USER="${PAYLOAD}/usr/share/thirdflare-one/networkmanager/profiles" \
+  node "${ROOT}/scripts/sync-nm-profiles.mjs"
 
 printf '%s\n' "$VERSION" > "${DIST}/VERSION"
 echo "Staged payload at ${PAYLOAD} (version ${VERSION})"

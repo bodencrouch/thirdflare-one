@@ -90,6 +90,27 @@ try {
   const browser = await chromium.launch(launchOpts);
   const page = await browser.newPage();
   await page.goto(`http://127.0.0.1:${port}/`, { waitUntil: "domcontentloaded", timeout: 30000 });
+  await page.locator("[data-testid='log-dock']").waitFor({ timeout: 20000 });
+  await page.goto(`http://127.0.0.1:${port}/?shell=1`, { waitUntil: "domcontentloaded", timeout: 30000 });
+  await page.evaluate(() => localStorage.setItem("thirdflare-ui-expert", "1"));
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await page.locator("[data-testid='log-dock']").waitFor({ timeout: 20000 });
+  const dockPinned = await page.evaluate(() => {
+    const dock = document.querySelector("[data-testid='log-dock']");
+    if (!dock) return false;
+    const rect = dock.getBoundingClientRect();
+    return rect.bottom <= window.innerHeight + 1 && rect.top < window.innerHeight;
+  });
+  if (!dockPinned) throw new Error("log-dock not pinned to viewport in native expert shell");
+  await page.locator("[data-log-tab='console']").click();
+  await page.waitForFunction(
+    () => {
+      const tab = document.querySelector("[data-log-tab='console']");
+      const body = document.querySelector(".log-dock-body");
+      return tab?.classList.contains("active") && body?.querySelector(".log-dock-console, .log-console-empty");
+    },
+    { timeout: 10000 }
+  );
   const toggle = page.locator("[data-testid='connection-toggle']");
   await toggle.waitFor({ timeout: 20000 });
   await httpJson("POST", "/api/action", { action: "register" });
@@ -107,7 +128,19 @@ try {
   await page.locator("[data-nav='account']").click();
   await page.locator("[data-testid='account-register']").waitFor({ timeout: 20000 });
   await page.locator("[data-nav='split']").click();
-  await page.getByText("Most traffic through WARP, bypass specific sites").waitFor({ timeout: 15000 });
+  await page.getByText("Everything through WARP except certain sites").waitFor({ timeout: 15000 });
+  await page.getByRole("heading", { name: "App routing" }).waitFor({ timeout: 15000 });
+  const routingDump = page.locator("details[data-panel-id='split-dump'] summary");
+  await routingDump.click();
+  await page.waitForFunction(
+    () => document.querySelector("details[data-panel-id='split-dump']")?.open === true,
+    { timeout: 5000 }
+  );
+  await page.waitForTimeout(3500);
+  await page.waitForFunction(
+    () => document.querySelector("details[data-panel-id='split-dump']")?.open === true,
+    { timeout: 5000 }
+  );
   await httpJson("POST", "/api/action", { action: "deleteRegistration" });
   await page.reload({ waitUntil: "domcontentloaded" });
   await page.locator("[data-nav='account']").click();

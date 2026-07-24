@@ -41,5 +41,11 @@ export function t(key, params = {}) {
 }
 
 export function tip(key) {
-  return t(`tips.${key}`);
+  return formatMultiline(t(`tips.${key}`));
+}
+
+/** Render locale strings with intentional line breaks (JSON \\n). */
+export function formatMultiline(text) {
+  if (typeof text !== "string") return text;
+  return text.replace(/\\n/g, "\n");
 }

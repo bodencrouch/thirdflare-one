@@ -48,11 +48,22 @@ contents:
     dst: /usr/share/doc/thirdflare
   - src: ./dist/payload/usr/share/licenses/thirdflare
     dst: /usr/share/licenses/thirdflare
+  - src: ./dist/payload/etc/NetworkManager/dispatcher.d/99-thirdflare-warp
+    dst: /etc/NetworkManager/dispatcher.d/99-thirdflare-warp
+    file_info:
+      mode: 0755
+  - src: ./dist/payload/etc/sysctl.d/99-thirdflare-warp.conf
+    dst: /etc/sysctl.d/99-thirdflare-warp.conf
+  - src: ./dist/payload/usr/lib/NetworkManager/VPN/nm-thirdflare-warp-service.name
+    dst: /usr/lib/NetworkManager/VPN/nm-thirdflare-warp-service.name
+  - src: ./dist/payload/usr/share/thirdflare-one/networkmanager/profiles
+    dst: /usr/share/thirdflare-one/networkmanager/profiles
 depends:
   - nodejs
 recommends:
   - python3-pyqt6
   - python3-pyqt6-webengine
+  - network-manager
   - yad
   - libnotify-bin
 overrides:
