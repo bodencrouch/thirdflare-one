@@ -364,12 +364,20 @@ test("POST /api/config/tray-autostart persists and syncs desktop entry", async (
   assert.equal(enable.status, 200);
   assert.equal(enable.json.ok, true);
   assert.equal(enable.json.config?.tray?.autostart, true);
-  assert.equal(enable.json.sync?.enabled, true);
+  if (process.platform === "linux") {
+    assert.equal(enable.json.sync?.enabled, true);
+  } else {
+    assert.equal(enable.json.sync?.skipped, true);
+  }
 
   const disable = await httpJson("POST", "/api/config/tray-autostart", { autostart: false });
   assert.equal(disable.status, 200);
   assert.equal(disable.json.config?.tray?.autostart, false);
-  assert.equal(disable.json.sync?.removed, true);
+  if (process.platform === "linux") {
+    assert.equal(disable.json.sync?.removed, true);
+  } else {
+    assert.equal(disable.json.sync?.skipped, true);
+  }
 });
 
 test("POST /api/action applyLicense and registerOrganization validate input", async () => {
