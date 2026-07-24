@@ -164,7 +164,7 @@ jobs:
       - name: Open Flathub manifest PR
         env:
           FLATHUB_PAT: ${{ secrets.FLATHUB_PAT }}
-          FLATHUB_FORK: ${{ vars.FLATHUB_FORK || 'oldrepublicwizard/flathub' }}
+          FLATHUB_FORK: ${{ vars.FLATHUB_FORK || 'bodencrouch/flathub' }}
         run: bash scripts/publish-flathub-pr.sh "${{ needs.resolve-version.outputs.version }}"
 
   publish-appimagehub:
@@ -182,7 +182,7 @@ jobs:
       - name: Open AppImageHub listing PR
         env:
           GH_PAT: ${{ secrets.GH_PAT }}
-          APPIMAGEHUB_FORK: ${{ vars.APPIMAGEHUB_FORK || 'oldrepublicwizard/appimage.github.io' }}
+          APPIMAGEHUB_FORK: ${{ vars.APPIMAGEHUB_FORK || 'bodencrouch/appimage.github.io' }}
         run: bash scripts/publish-appimagehub-pr.sh "${{ needs.resolve-version.outputs.version }}"
 
   publish-copr-hint:
@@ -192,5 +192,5 @@ jobs:
       - name: COPR / Packit note
         run: |
           echo "Fedora COPR builds are triggered by Packit on release when enabled."
-          echo "Enable Packit at https://packit.dev and COPR project oldrepublicwizard/thirdflare-one"
+          echo "Enable Packit at https://packit.dev and COPR project bodencrouch/thirdflare-one"
           echo "Spec: packaging/fedora/thirdflare-one.spec"

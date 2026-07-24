@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <component type="desktop-application">
-  <id>io.github.oldrepublicwizard.ThirdFlareOne</id>
+  <id>io.github.bodencrouch.ThirdFlareOne</id>
   <name>ThirdFlare One</name>
   <summary>Unofficial Cloudflare One client via warp-cli</summary>
   <metadata_license>MIT</metadata_license>
@@ -17,9 +17,9 @@
       of Cloudflare, Inc.
     </p>
   </description>
-  <launchable type="desktop-id">io.github.oldrepublicwizard.ThirdFlareOne.desktop</launchable>
-  <url type="homepage">https://github.com/oldrepublicwizard/thirdflare-one</url>
-  <developer id="io.github.oldrepublicwizard">
+  <launchable type="desktop-id">io.github.bodencrouch.ThirdFlareOne.desktop</launchable>
+  <url type="homepage">https://github.com/bodencrouch/thirdflare-one</url>
+  <developer id="io.github.bodencrouch">
     <name>ThirdFlare One contributors</name>
   </developer>
   <categories>

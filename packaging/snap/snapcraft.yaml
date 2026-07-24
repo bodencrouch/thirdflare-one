@@ -10,9 +10,9 @@ description: |
 grade: stable
 confinement: classic
 license: MIT
-website: https://github.com/oldrepublicwizard/thirdflare-one
-source-code: https://github.com/oldrepublicwizard/thirdflare-one
-contact: https://github.com/oldrepublicwizard/thirdflare-one/issues
+website: https://github.com/bodencrouch/thirdflare-one
+source-code: https://github.com/bodencrouch/thirdflare-one
+contact: https://github.com/bodencrouch/thirdflare-one/issues
 
 apps:
   thirdflare-one:
@@ -50,9 +50,20 @@ parts:
       EOF
       chmod 0755 "$CRAFT_PART_INSTALL/bin/thirdflare-one"
       chmod 0755 "$CRAFT_PART_INSTALL/usr/lib/thirdflare/bin/"*
+      chmod 0755 "$CRAFT_PART_INSTALL/usr/lib/thirdflare/scripts/"*.py 2>/dev/null || true
+      chmod 0755 "$CRAFT_PART_INSTALL/usr/lib/thirdflare/scripts/thirdflare-nft-apply" 2>/dev/null || true
+      cat > "$CRAFT_PART_INSTALL/bin/thirdflare-one-tray" <<'EOF'
+      #!/bin/bash
+      exec "$SNAP/usr/lib/thirdflare/bin/thirdflare-tray" "$@"
+      EOF
+      chmod 0755 "$CRAFT_PART_INSTALL/bin/thirdflare-one-tray"
+      install -Dm644 "$CRAFT_PART_SRC/packaging/polkit/com.thirdflare.one.policy" \
+        "$CRAFT_PART_INSTALL/share/polkit-1/actions/com.thirdflare.one.policy"
       install -m 0644 "$CRAFT_PART_SRC/packaging/thirdflare-one.desktop" \
         "$CRAFT_PART_INSTALL/share/applications/thirdflare-one.desktop"
       install -m 0644 "$CRAFT_PART_SRC/assets/thirdflare.svg" \
         "$CRAFT_PART_INSTALL/share/icons/hicolor/scalable/apps/thirdflare.svg"
     stage-packages:
       - nodejs
+      - python3-pyqt6
+      - python3-pyqt6-webengine

@@ -4,15 +4,17 @@ pkgver=__VERSION__
 pkgrel=1
 pkgdesc="ThirdFlare One — unofficial Cloudflare One client via warp-cli"
 arch=('any')
-url="https://github.com/oldrepublicwizard/thirdflare-one"
+url="https://github.com/bodencrouch/thirdflare-one"
 license=('MIT')
 depends=('nodejs>=20')
 optdepends=(
-  'yad: optional notification-area tray menu'
+  'python-pyqt6: KDE/Wayland native tray shell with embedded Web UI'
+  'python-pyqt6-webengine: embedded Web UI for PyQt6 tray'
+  'yad: optional notification-area tray menu fallback'
   'libnotify: desktop notifications'
   'cloudflare-warp-bin: Cloudflare WARP client providing warp-cli (AUR)'
 )
-source=("${pkgname}-${pkgver}.tar.gz::https://github.com/oldrepublicwizard/thirdflare-one/releases/download/v${pkgver}/thirdflare-one-${pkgver}-src.tar.gz")
+source=("${pkgname}-${pkgver}.tar.gz::https://github.com/bodencrouch/thirdflare-one/releases/download/v${pkgver}/thirdflare-one-${pkgver}-src.tar.gz")
 sha256sums=('SKIP')
 
 package() {
@@ -22,14 +24,21 @@ package() {
   install -m 0644 server.js package.json "${pkgdir}/usr/lib/thirdflare/"
   cp -a public assets lib config "${pkgdir}/usr/lib/thirdflare/"
   install -d "${pkgdir}/usr/lib/thirdflare/scripts" "${pkgdir}/usr/lib/thirdflare/bin"
-  install -m 0755 scripts/health-check.mjs scripts/port-open.mjs "${pkgdir}/usr/lib/thirdflare/scripts/"
+  install -m 0755 scripts/health-check.mjs scripts/port-open.mjs scripts/thirdflare-nft-apply \
+    scripts/tray-qt.py scripts/tray-sni.py scripts/tray_api.py scripts/tray-warp-action.py \
+    "${pkgdir}/usr/lib/thirdflare/scripts/"
   install -m 0755 bin/thirdflare bin/thirdflare-tray bin/thirdflare-one-gui bin/thirdflare-one-tray \
     "${pkgdir}/usr/lib/thirdflare/bin/"
 
   install -Dm755 packaging/usr-bin-wrapper.sh "${pkgdir}/usr/bin/thirdflare"
   install -Dm755 packaging/usr-bin-alias-wrapper.sh "${pkgdir}/usr/bin/thirdflare-one"
+  install -Dm755 packaging/usr-bin-tray-wrapper.sh "${pkgdir}/usr/bin/thirdflare-one-tray"
+  install -Dm644 packaging/polkit/com.thirdflare.one.policy \
+    "${pkgdir}/usr/share/polkit-1/actions/com.thirdflare.one.policy"
   install -Dm644 packaging/thirdflare-one.desktop \
     "${pkgdir}/usr/share/applications/thirdflare-one.desktop"
+  install -Dm644 packaging/thirdflare-one-tray.desktop \
+    "${pkgdir}/usr/share/applications/thirdflare-one-tray.desktop"
   install -Dm644 assets/thirdflare.svg \
     "${pkgdir}/usr/share/icons/hicolor/scalable/apps/thirdflare.svg"
   install -Dm644 packaging/thirdflare-one.service \

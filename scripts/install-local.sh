@@ -94,6 +94,24 @@ echo "Installing ThirdFlare One $(thirdflare_version) to ${INSTALL_DIR}"
 mkdir -p "$INSTALL_DIR"
 rsync -a --delete "${RSYNC_EXCLUDES[@]}" "${ROOT}/" "${INSTALL_DIR}/"
 
+ICON_THEME_ROOT="${XDG_DATA_HOME:-$HOME/.local/share}/icons/hicolor"
+mkdir -p "${ICON_THEME_ROOT}/scalable/apps"
+install -m 0644 "${INSTALL_DIR}/assets/thirdflare.svg" "${ICON_THEME_ROOT}/scalable/apps/thirdflare-one.svg"
+_tray_icon="${INSTALL_DIR}/assets/thirdflare-tray.svg"
+[[ -f "$_tray_icon" ]] || _tray_icon="${INSTALL_DIR}/assets/thirdflare.svg"
+for _size in 16 22 24 32 48; do
+  _png_dir="${ICON_THEME_ROOT}/${_size}x${_size}/apps"
+  mkdir -p "$_png_dir"
+  if command -v rsvg-convert >/dev/null 2>&1; then
+    rsvg-convert -w "$_size" -h "$_size" "$_tray_icon" -o "${_png_dir}/thirdflare-one.png"
+  elif command -v convert >/dev/null 2>&1; then
+    convert -background none "$_tray_icon" -resize "${_size}x${_size}" "${_png_dir}/thirdflare-one.png"
+  fi
+done
+if command -v gtk-update-icon-cache >/dev/null 2>&1; then
+  gtk-update-icon-cache -f -t "$ICON_THEME_ROOT" >/dev/null 2>&1 || true
+fi
+
 if [[ "$WITH_BIN_LINKS" -eq 1 ]]; then
   mkdir -p "$LOCAL_BIN"
   thirdflare_link_or_copy "${INSTALL_DIR}/bin/thirdflare" "${LOCAL_BIN}/thirdflare"
@@ -117,31 +135,26 @@ Terminal=false
 Categories=Network;
 Keywords=Cloudflare;WARP;Zero Trust;ThirdFlare One;VPN;DNS;
 StartupNotify=true
-Actions=Connect;Disconnect;Toggle;Status;Tray;
+Actions=WarpConnection;Status;Tray;Panel;
 
-[Desktop Action Connect]
-Name=Connect WARP
-Exec=${INSTALL_DIR}/bin/thirdflare --connect
-Icon=${INSTALL_DIR}/assets/thirdflare.svg
-
-[Desktop Action Disconnect]
-Name=Disconnect WARP
-Exec=${INSTALL_DIR}/bin/thirdflare --disconnect
-Icon=${INSTALL_DIR}/assets/thirdflare.svg
-
-[Desktop Action Toggle]
-Name=Toggle WARP
-Exec=${INSTALL_DIR}/bin/thirdflare --toggle
+[Desktop Action WarpConnection]
+Name=Connect or Disconnect WARP
+Exec=${INSTALL_DIR}/bin/thirdflare --warp-action
 Icon=${INSTALL_DIR}/assets/thirdflare.svg
 
 [Desktop Action Status]
 Name=Show WARP Status
-Exec=${INSTALL_DIR}/bin/thirdflare
+Exec=${INSTALL_DIR}/bin/thirdflare --warp-status
 Icon=${INSTALL_DIR}/assets/thirdflare.svg
 
 [Desktop Action Tray]
-Name=Start Tray Menu
+Name=Start Tray and Control Panel
 Exec=${INSTALL_DIR}/bin/thirdflare --tray
+Icon=${INSTALL_DIR}/assets/thirdflare.svg
+
+[Desktop Action Panel]
+Name=Open ThirdFlare One
+Exec=${INSTALL_DIR}/bin/thirdflare --panel
 Icon=${INSTALL_DIR}/assets/thirdflare.svg
 DESKTOP
   chmod 0644 "$DESKTOP_FILE"
@@ -150,6 +163,10 @@ DESKTOP
     update-desktop-database "$APPLICATIONS_DIR" >/dev/null 2>&1 || true
   fi
   echo "Installed desktop entry ${DESKTOP_FILE}"
+fi
+
+if [[ -f "${INSTALL_DIR}/scripts/sync-tray-autostart.mjs" ]]; then
+  THIRDFLARE_ONE_HOME="${INSTALL_DIR}" node "${INSTALL_DIR}/scripts/sync-tray-autostart.mjs" >/dev/null 2>&1 || true
 fi
 
 if [[ "$WITH_SERVICE" -eq 1 ]]; then
@@ -184,13 +201,79 @@ SERVICE
   fi
 fi
 
+TRAY_HINT=""
+if /usr/bin/python3 - <<'PY' >/dev/null 2>&1
+from PyQt6.QtWidgets import QSystemTrayIcon
+from PyQt6.QtWebEngineWidgets import QWebEngineView
+PY
+then
+  TRAY_HINT="  Tray + app:  thirdflare-one-tray   (PyQt6 native shell with full Web UI — left-click tray icon)"
+elif [[ "${XDG_SESSION_TYPE:-}" == wayland || -n "${WAYLAND_DISPLAY:-}" ]]; then
+  if /usr/bin/python3 - <<'PY' >/dev/null 2>&1
+import gi
+gi.require_version("Gtk", "3.0")
+try:
+    gi.require_version("AppIndicator3", "0.1")
+    from gi.repository import AppIndicator3
+except ValueError:
+    gi.require_version("AyatanaAppIndicator3", "0.1")
+    from gi.repository import AyatanaAppIndicator3
+PY
+  then
+    TRAY_HINT="  Tray menu:   thirdflare-one-tray   (StatusNotifierItem — install python3-pyqt6 for native panel)"
+  else
+    TRAY_HINT="  Tray menu:   thirdflare-one-tray   (install python3-pyqt6 for KDE/Wayland tray + panel)"
+  fi
+elif command -v yad >/dev/null 2>&1; then
+  TRAY_HINT="  Tray menu:   thirdflare-one-tray   (yad found — left-click opens control panel when PyQt6 is installed)"
+else
+  TRAY_HINT="  Tray menu:   thirdflare-one-tray   (install python3-pyqt6; see: thirdflare-one-tray --check)"
+fi
+
 cat <<DONE
 
 ThirdFlare One is installed.
 
   Launch GUI:  thirdflare-one
   API daemon:  thirdflare-one --no-open
+${TRAY_HINT}
   AppImage:    ./thirdflare-one build appimage
 
 Install root: ${INSTALL_DIR}
 DONE
+
+if ! /usr/bin/python3 - <<'PY' >/dev/null 2>&1
+import gi
+gi.require_version("Gtk", "3.0")
+try:
+    gi.require_version("AppIndicator3", "0.1")
+    from gi.repository import AppIndicator3
+except ValueError:
+    gi.require_version("AyatanaAppIndicator3", "0.1")
+    from gi.repository import AyatanaAppIndicator3
+PY
+then
+  if command -v dnf >/dev/null 2>&1; then
+    echo "Optional KDE/Wayland tray: sudo dnf install python3-gobject libayatana-appindicator-gtk3"
+  elif command -v apt-get >/dev/null 2>&1; then
+    echo "Optional KDE/Wayland tray: sudo apt install python3-gi libayatana-appindicator3-1"
+  elif command -v pacman >/dev/null 2>&1; then
+    echo "Optional KDE/Wayland tray: sudo pacman -S python-gobject libayatana-appindicator-gtk3"
+  fi
+elif ! command -v yad >/dev/null 2>&1; then
+  if command -v dnf >/dev/null 2>&1; then
+    echo "Optional X11 tray dependency: sudo dnf install yad"
+  elif command -v apt-get >/dev/null 2>&1; then
+    echo "Optional X11 tray dependency: sudo apt install yad"
+  elif command -v pacman >/dev/null 2>&1; then
+    echo "Optional X11 tray dependency: sudo pacman -S yad"
+  else
+    echo "Optional tray dependency: install yad or python3-gobject + libayatana-appindicator-gtk3"
+  fi
+fi
+
+if [[ ! -f /usr/share/polkit-1/actions/com.thirdflare.one.policy ]]; then
+  echo "Optional Always On (kill switch) polkit policy:"
+  echo "  sudo install -m 0644 ${INSTALL_DIR}/packaging/polkit/com.thirdflare.one.policy /usr/share/polkit-1/actions/"
+  echo "  (deb/rpm installs include this automatically; local copy installs do not.)"
+fi

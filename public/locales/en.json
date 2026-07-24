@@ -9,7 +9,6 @@
     "diagnostics": "Diagnostics",
     "settings": "WARP Settings",
     "app": "App",
-    "parity": "Parity",
     "advanced": "Advanced"
   },
   "brand": {
@@ -31,6 +30,29 @@
     "unknown": "Unknown",
     "loading": "Loading…"
   },
+  "simple": {
+    "nav": {
+      "home": "Home",
+      "connectivity": "Connectivity",
+      "settings": "Settings",
+      "profile": "Profile",
+      "about": "About"
+    },
+    "connected": "Connected",
+    "disconnected": "Disconnected",
+    "dnsConnection": "DNS connection",
+    "dnsProtocol": "DNS protocol",
+    "tunnelConnection": "Tunnel connection",
+    "connectionStatus": "Connection status",
+    "warpTunnelProtocol": "WARP tunnel protocol",
+    "encryptionKeys": "Encryption keys",
+    "resetKeys": "Reset keys",
+    "statusLine": "Status",
+    "expertMode": "Advanced / expert mode",
+    "expertModeHint": "Show the full ThirdFlare One control panel with Gateway, split tunnel, diagnostics, and all warp-cli settings.",
+    "expertModeOffHint": "Return to the simplified Cloudflare One Client layout.",
+    "aboutCopy": "ThirdFlare One is an unofficial cross-platform client for Cloudflare WARP (warp-cli)."
+  },
   "home": {
     "title": "WARP connection",
     "copy": "Manage the local CloudflareWARP daemon through warp-cli.",
@@ -41,8 +63,8 @@
     "mode": "Mode",
     "protocol": "Tunnel protocol",
     "families": "Families DNS",
-    "killSwitch": "Kill switch",
-    "killSwitchCopy": "Block outbound traffic if the WARP tunnel drops — ThirdFlare nftables rules (not Windows Always On).",
+    "killSwitch": "Always On (kill switch)",
+    "killSwitchCopy": "Block outbound traffic if the WARP tunnel drops — ThirdFlare nftables rules, the Linux equivalent of Windows Always On.",
     "killSwitchLabel": "Block traffic outside WARP",
     "killSwitchHint": "Allows loopback, CloudflareWARP, and Cloudflare bootstrap IPs so reconnect still works.",
     "killSwitchMismatch": "Desired state differs from nftables — privilege may be required (pkexec/sudo).",
@@ -71,6 +93,10 @@
     "upstream": "upstream",
     "prerelease": "pre",
     "checkOnStartup": "Check for updates on startup",
+    "trayAutostart": "Start tray at login",
+    "trayAutostartHint": "Adds an XDG autostart entry so the ThirdFlare One tray launches when your desktop session starts (Linux only).",
+    "trayAutostartOn": "Tray autostart enabled",
+    "trayAutostartOff": "Tray autostart disabled",
     "currentVersion": "Current version",
     "installFormat": "Install format",
     "updateAvailable": "Update available: {version}",
@@ -81,6 +107,19 @@
     "stable": "Stable",
     "beta": "Beta",
     "noReleases": "No releases found for this repository."
+  },
+  "splitGuide": {
+    "title": "How split tunnel works",
+    "modesTitle": "Two routing modes",
+    "modesBody": "WARP routes traffic by destination (IP address or domain), not by application name. Exclude mode (default): everything goes through WARP except routes you list. Include mode: only listed destinations go through WARP; everything else stays on your normal Internet connection.",
+    "uiTitle": "Using this tab",
+    "uiBody": "Connect WARP first (Connect in the title bar). Add IP/CIDR or hostnames below — they apply to your local warp-cli split-tunnel list (Consumer). Zero Trust teams may also push split tunnels from the Cloudflare dashboard device profile; check Routing dump and IP routes to see what is active.",
+    "perAppTitle": "Per-application routing (qbittorrent, Konsole, etc.)",
+    "perAppBody": "Cloudflare does not support picking apps by process name on Linux. Split tunnel cannot say “only qbittorrent” or “everything except Konsole.” WARP changes the OS routing table; each app uses the system network stack.",
+    "perAppProxy": "For one app through WARP: use Local proxy mode (Tunnel → Mode → proxy, or warp-cli mode proxy). WARP listens on 127.0.0.1:40000 (SOCKS5/HTTP). Configure only that app to use the proxy — e.g. qBittorrent → Connection → SOCKS5 127.0.0.1:40000, enable proxy for peer connections. Other apps stay off WARP.",
+    "perAppExclude": "To bypass WARP for specific sites (not apps): in Exclude mode, add the IP or domain the app uses. You must list every hostname or IP — Cloudflare notes “App Types” are not supported yet; services like torrents use many dynamic peer IPs, so IP/domain split tunnel is a poor fit for qBittorrent.",
+    "konsoleNote": "Konsole is a terminal, not a fixed destination. It runs whatever commands you type (ssh, curl, ping). You cannot exclude “Konsole” from WARP; exclude specific IPs/domains instead. LAN/private ranges (10.0.0.0/8, 192.168.0.0/16, …) are already excluded by default so local SSH often bypasses WARP.",
+    "docsLink": "Cloudflare Split Tunnels documentation"
   },
   "account": {
     "title": "Account",
@@ -147,8 +186,8 @@
     "pageSettings": "WARP Settings maps to device/admin controls: compliance environment, admin override codes, local network exclusion, MDM, support URL, and the ThirdFlare kill switch.",
     "killSwitch": "ThirdFlare kill switch installs an nftables output filter (table inet thirdflare_killswitch). Traffic may leave only via lo, CloudflareWARP, or Cloudflare bootstrap/ingress IPs documented for the One Client. Linux warp-cli has no public Always On CLI — this is the native Linux equivalent. Zero Trust browser/IdP enrollment temporarily pauses the filter so Access portals can load.",
     "killSwitchAllowLan": "When enabled with the kill switch, also accept RFC1918 IPv4 and unique-local/link-local IPv6 so LAN devices stay reachable.",
-    "pageApp": "ThirdFlare One app preferences (locale, updates). Not part of Cloudflare’s official client settings.",
-    "pageParity": "Internal coverage checklist versus the Windows Cloudflare One Client UI. Not a Cloudflare product setting.",
+    "pageApp": "ThirdFlare One app preferences (locale, tray autostart, updates). Not part of Cloudflare’s official client settings.",
+    "trayAutostart": "Writes ~/.config/autostart/thirdflare-one-tray.desktop when enabled. Requires a desktop session (KDE, GNOME, etc.).",
     "pageAdvanced": "Run uncommon warp-cli subcommands safely through the daemon API. Prefer dedicated pages when a control already exists.",
 
     "connect": "Connects the Cloudflare One Client tunnel (warp-cli connect). Intended state is Connected; check status text if the daemon reports an error.",

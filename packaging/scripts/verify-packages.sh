@@ -29,10 +29,16 @@ verify_deb_rpm() {
   deb_contents="$(dpkg-deb -c "$deb")"
   grep -q '/usr/lib/thirdflare/server.js' <<<"$deb_contents"
   grep -q '/usr/bin/thirdflare' <<<"$deb_contents"
+  grep -q '/usr/bin/thirdflare-one-tray' <<<"$deb_contents"
+  grep -q '/usr/lib/thirdflare/scripts/tray-qt.py' <<<"$deb_contents"
+  grep -q '/usr/lib/thirdflare/scripts/thirdflare-nft-apply' <<<"$deb_contents"
+  grep -q '/usr/share/polkit-1/actions/com.thirdflare.one.policy' <<<"$deb_contents"
 
   rpm -qip "$rpm" >/dev/null
   rpm_list="$(rpm -qlp "$rpm")"
   grep -q '/usr/lib/thirdflare/server.js' <<<"$rpm_list"
+  grep -q '/usr/bin/thirdflare-one-tray' <<<"$rpm_list"
+  grep -q '/usr/lib/thirdflare/scripts/tray-qt.py' <<<"$rpm_list"
 
   if command -v tar >/dev/null 2>&1; then
     arch_contents="$(tar -tf "$arch")"
@@ -66,6 +72,10 @@ verify_appimage() {
   # Extract-only validation when FUSE is unavailable.
   if "$appimage" --appimage-extract >/dev/null 2>&1; then
     test -f squashfs-root/usr/lib/thirdflare/server.js
+    test -f squashfs-root/usr/lib/thirdflare/scripts/tray-qt.py
+    test -f squashfs-root/usr/lib/thirdflare/scripts/thirdflare-nft-apply
+    test -f squashfs-root/usr/lib/thirdflare/lib/tray/autostart.mjs
+    test -f squashfs-root/usr/share/polkit-1/actions/com.thirdflare.one.policy
     rm -rf squashfs-root
   else
     echo "AppImage extract skipped (FUSE unavailable); size/type check passed"

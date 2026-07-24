@@ -1,6 +1,6 @@
 class ThirdflareOne < Formula
   desc "ThirdFlare One — unofficial Cloudflare One client via warp-cli"
-  homepage "https://github.com/oldrepublicwizard/thirdflare-one"
+  homepage "https://github.com/bodencrouch/thirdflare-one"
   url "__URL__"
   sha256 "__SHA256__"
   license "MIT"

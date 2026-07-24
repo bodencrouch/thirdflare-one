@@ -2,7 +2,7 @@
 
 ## Project
 
-**ThirdFlare One** — unofficial third-party Cloudflare One client (`thirdflare` npm package). Wraps host `warp-cli` through a Node daemon and optional Web UI. GitHub repository: `oldrepublicwizard/thirdflare-one`.
+**ThirdFlare One** — unofficial third-party Cloudflare One client (`thirdflare` npm package). Wraps host `warp-cli` through a Node daemon and optional Web UI. GitHub repository: `bodencrouch/thirdflare-one`.
 
 ## Project Structure
 
@@ -10,7 +10,9 @@
 - `lib/config.mjs` — layered configuration (system, user, env, session).
 - `lib/version.mjs` — installed semver from `package.json`.
 - `lib/update/` — GitHub/manifest update engine and AppImage apply.
-- `lib/killswitch/` — nftables kill-switch rules and privileged apply (`nft` / `pkexec`).
+- `lib/killswitch/` — nftables kill-switch rules and privileged apply (`thirdflare-nft-apply` / polkit).
+- `lib/tray/` — XDG autostart sync for tray (`tray.autostart`).
+- `scripts/tray-qt.py`, `scripts/thirdflare-nft-apply` — native shell and polkit helper.
 - `config/config.example.json` — documented defaults.
 - `config/update-manifest.json` — stable/beta pointers for client update checks.
 - `public/` — optional Web UI (off by default for systemd daemon); `i18n.js` + `locales/`.
@@ -35,7 +37,9 @@
 - `npm run test:update` — update engine unit tests (mocked GitHub).
 - `npm run test:notify` — desktop notification / status transition tests.
 - `npm run test:registration` — registration parser unit tests.
+- `npm run test:polkit` — polkit helper script validation tests.
 - `npm run test:killswitch` — nftables kill-switch rule generation tests.
+- `npm run test:tray` — tray XDG autostart config and desktop entry tests.
 - `npm run test:ui` — Playwright UI smoke (mock daemon).
 - `npm run test:all` — all Plane M Node test suites (not Playwright).
 - `npm run test:warp:real` — Plane R real WARP smoke (Linux; soft-skip unless required).
@@ -62,8 +66,8 @@ Run `npm run check` and `npm run test:all` before handoff. See **[docs/CI.md](do
 
 ## Learned Workspace Facts
 
-- GitHub repository: `oldrepublicwizard/thirdflare-one`.
+- GitHub repository: `bodencrouch/thirdflare-one`.
 - Optional Web UI is off by default; settings are layered (systemd/system defaults with provisional session and in-app overrides).
 - Packaging/CI targets include AppImage, deb, rpm, Flatpak, Snap, GHCR Docker images, and Homebrew. Required CI is Plane M (mock) on Linux/macOS/Windows; Plane R real WARP smoke is Ubuntu-only and optional — see `docs/CI.md`.
 - Native nftables kill-switch lives under `lib/killswitch/` and is exposed via `/api/killswitch`.
-- Outstanding native gaps often tracked: first-class tray packaging, self-contained native shell, polkit privilege broker, and Windows visual parity.
+- Outstanding native gaps often tracked: self-contained native shell (Tauri/Electron or bundled Qt in AppImage), and Windows visual parity. Tray packaging and polkit kill-switch helper ship in deb/rpm/AppImage payloads as of 0.2.x.

@@ -1,27 +1,198 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-APP_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
+_script="${BASH_SOURCE[0]}"
+while [[ -L "$_script" ]]; do
+  _dir="$(cd -- "$(dirname -- "$_script")" && pwd)"
+  _script="$(readlink "$_script")"
+  [[ "$_script" != /* ]] && _script="$_dir/$_script"
+done
+APP_DIR="$(cd -- "$(dirname -- "$_script")/.." && pwd)"
+unset _script _dir
 LAUNCHER="$APP_DIR/bin/thirdflare"
 ICON="$APP_DIR/assets/thirdflare.svg"
+SNI_TRAY="$APP_DIR/scripts/tray-sni.py"
+QT_TRAY="$APP_DIR/scripts/tray-qt.py"
+RUNTIME_DIR="${XDG_RUNTIME_DIR:-/tmp}/thirdflare"
+CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/thirdflare"
+TRAY_PID_FILE="${RUNTIME_DIR}/tray.pid"
+TRAY_LOG_FILE="${CACHE_DIR}/tray.log"
 
 usage() {
   cat <<USAGE
 ThirdFlare One tray
 
 Usage:
-  thirdflare-one-tray          Start a yad-based tray menu
-  thirdflare-one-tray --status Print tray availability and WARP status
-  thirdflare-one-tray --help   Show this help
+  thirdflare-one-tray            Start the tray + native app shell (background)
+  thirdflare-one-tray --panel    Show the native app window (starts tray if needed)
+  thirdflare-one-tray --stop     Stop the tray
+  thirdflare-one-tray --check    Print tray readiness (exit 0 when ready)
+  thirdflare-one-tray --status   Show WARP status (notify when available)
+  thirdflare-one-tray --help     Show this help
+
+Also available as: thirdflare-one --tray
+
+On KDE Plasma / Wayland the tray uses PyQt6 with the full Web UI embedded (left-click).
+The browser is not used unless you launch thirdflare-one directly.
 USAGE
 }
 
-tray_available() {
-  command -v yad >/dev/null 2>&1 && [[ -n "${DISPLAY:-}${WAYLAND_DISPLAY:-}" ]]
+tray_python_bin() {
+  if [[ -n "${THIRDFLARE_TRAY_PYTHON:-}" && -x "${THIRDFLARE_TRAY_PYTHON}" ]]; then
+    printf '%s\n' "${THIRDFLARE_TRAY_PYTHON}"
+    return 0
+  fi
+  if [[ -x /usr/bin/python3 ]]; then
+    printf '%s\n' /usr/bin/python3
+    return 0
+  fi
+  if command -v python3 >/dev/null 2>&1; then
+    command -v python3
+    return 0
+  fi
+  return 1
+}
+
+tray_qt_available() {
+  local py
+  py="$(tray_python_bin)" || return 1
+  "$py" - <<'PY' >/dev/null 2>&1
+from PyQt6.QtWidgets import QSystemTrayIcon
+from PyQt6.QtWebEngineWidgets import QWebEngineView
+PY
+}
+
+tray_sni_available() {
+  local py
+  py="$(tray_python_bin)" || return 1
+  "$py" - <<'PY' >/dev/null 2>&1
+import gi
+gi.require_version("Gtk", "3.0")
+try:
+    gi.require_version("AppIndicator3", "0.1")
+    from gi.repository import AppIndicator3  # noqa: F401
+except ValueError:
+    gi.require_version("AyatanaAppIndicator3", "0.1")
+    from gi.repository import AyatanaAppIndicator3  # noqa: F401
+PY
+}
+
+tray_yad_available() {
+  command -v yad >/dev/null 2>&1
+}
+
+tray_display_available() {
+  [[ -n "${DISPLAY:-}${WAYLAND_DISPLAY:-}" ]]
+}
+
+tray_prefers_sni() {
+  [[ "${XDG_SESSION_TYPE:-}" == wayland || -n "${WAYLAND_DISPLAY:-}" ]]
+}
+
+tray_backend() {
+  if tray_qt_available && { [[ "${XDG_CURRENT_DESKTOP:-}" == *KDE* ]] || tray_prefers_sni; }; then
+    printf '%s\n' "qt"
+    return 0
+  fi
+  if tray_sni_available; then
+    if tray_prefers_sni || ! tray_yad_available; then
+      printf '%s\n' "sni"
+      return 0
+    fi
+  fi
+  if tray_qt_available; then
+    printf '%s\n' "qt"
+    return 0
+  fi
+  if tray_yad_available; then
+    printf '%s\n' "yad"
+    return 0
+  fi
+  return 1
+}
+
+tray_install_hint() {
+  if tray_prefers_sni; then
+    if command -v dnf >/dev/null 2>&1; then
+      echo "Install tray support with: sudo dnf install python3-pyqt6 python3-pyqt6-webengine"
+    elif command -v apt-get >/dev/null 2>&1; then
+      echo "Install tray support with: sudo apt install python3-pyqt6 python3-pyqt6.qtwebengine"
+    elif command -v pacman >/dev/null 2>&1; then
+      echo "Install tray support with: sudo pacman -S python-pyqt6 python-pyqt6-webengine"
+    else
+      echo "Install python3-pyqt6 and PyQt6-WebEngine for KDE/Wayland native app support."
+    fi
+    return
+  fi
+  if command -v dnf >/dev/null 2>&1; then
+    echo "Install yad with: sudo dnf install yad"
+  elif command -v apt-get >/dev/null 2>&1; then
+    echo "Install yad with: sudo apt install yad"
+  elif command -v pacman >/dev/null 2>&1; then
+    echo "Install yad with: sudo pacman -S yad"
+  elif command -v zypper >/dev/null 2>&1; then
+    echo "Install yad with: sudo zypper install yad"
+  elif command -v apk >/dev/null 2>&1; then
+    echo "Install yad with: sudo apk add yad"
+  else
+    echo "Install the yad package from your distribution."
+  fi
+}
+
+tray_diagnose() {
+  if ! tray_display_available; then
+    printf '%s\n' "missing-display"
+    return 1
+  fi
+  if [[ "${XDG_SESSION_TYPE:-}" == wayland && -z "${DISPLAY:-}" ]] && ! tray_sni_available; then
+    printf '%s\n' "missing-sni-wayland"
+    return 1
+  fi
+  if tray_backend >/dev/null; then
+    printf '%s\n' "ready"
+    return 0
+  fi
+  if tray_prefers_sni; then
+    printf '%s\n' "missing-sni"
+    return 1
+  fi
+  printf '%s\n' "missing-yad"
+  return 1
+}
+
+tray_explain() {
+  local reason="$1"
+  case "$reason" in
+    missing-sni|missing-sni-wayland)
+      echo "ThirdFlare One tray on KDE Plasma / Wayland needs PyQt6 (preferred) or StatusNotifierItem support." >&2
+      tray_install_hint >&2
+      echo "Without the tray, use: thirdflare-one --no-open (API) or enable webui in config." >&2
+      ;;
+    missing-yad)
+      echo "ThirdFlare One tray requires yad (Yet Another Dialog) on X11 sessions." >&2
+      tray_install_hint >&2
+      echo "Without yad, use the Web UI: thirdflare-one" >&2
+      ;;
+    missing-display)
+      echo "ThirdFlare One tray needs a graphical session (DISPLAY or WAYLAND_DISPLAY)." >&2
+      echo "Run this from a desktop terminal, not over plain SSH." >&2
+      echo "Without a tray, use: thirdflare-one --no-open" >&2
+      ;;
+    *)
+      echo "ThirdFlare One tray is not available in this environment." >&2
+      echo "Use the Web UI instead: thirdflare-one" >&2
+      ;;
+  esac
+}
+
+tray_yad_env() {
+  if [[ "${XDG_SESSION_TYPE:-}" == wayland || -n "${WAYLAND_DISPLAY:-}" ]]; then
+    export GDK_BACKEND=x11
+  fi
 }
 
 status_text() {
-  "$LAUNCHER" --warp-status 2>&1 | tr '\n' ' ' | sed 's/[[:space:]]\+/ /g; s/[[:space:]]$//'
+  "$LAUNCHER" --warp-status 2>&1 | tr '\n' ' ' | sed 's/[[:space:]]\+/ /g; s/[[:space:]]*$//'
 }
 
 notify_status() {
@@ -33,29 +204,266 @@ notify_status() {
   fi
 }
 
-run_tray() {
-  if ! tray_available; then
-    echo "A yad tray requires yad plus DISPLAY or WAYLAND_DISPLAY." >&2
-    return 1
+ensure_daemon() {
+  if ! "$LAUNCHER" --status >/dev/null 2>&1; then
+    echo "Starting ThirdFlare One daemon for tray actions..." >&2
+    "$LAUNCHER" --no-open >/dev/null
+  fi
+}
+
+tray_process_running() {
+  pgrep -f "${QT_TRAY}" >/dev/null 2>&1 && return 0
+  pgrep -f "${SNI_TRAY}" >/dev/null 2>&1
+}
+
+tray_already_running() {
+  if tray_process_running; then
+    return 0
+  fi
+  if [[ -f "$TRAY_PID_FILE" ]]; then
+    local pid
+    pid="$(cat "$TRAY_PID_FILE" 2>/dev/null || true)"
+    if [[ -n "$pid" ]] && kill -0 "$pid" 2>/dev/null; then
+      return 0
+    fi
+    clear_tray_pid
+  fi
+  return 1
+}
+
+record_tray_pid() {
+  mkdir -p "$RUNTIME_DIR"
+  echo "$1" > "$TRAY_PID_FILE"
+}
+
+clear_tray_pid() {
+  rm -f "$TRAY_PID_FILE"
+}
+
+stop_tray() {
+  local pid
+  if tray_process_running; then
+    pkill -f "${QT_TRAY}" 2>/dev/null || true
+    pkill -f "${SNI_TRAY}" 2>/dev/null || true
+    pkill -f "yad --notification.*thirdflare" 2>/dev/null || true
+    echo "Stopped ThirdFlare One tray."
+  elif [[ -f "$TRAY_PID_FILE" ]]; then
+    pid="$(cat "$TRAY_PID_FILE" 2>/dev/null || true)"
+    if [[ -n "$pid" ]] && kill -0 "$pid" 2>/dev/null; then
+      kill "$pid" 2>/dev/null || true
+    fi
+    echo "Stopped ThirdFlare One tray."
+  else
+    echo "ThirdFlare One tray is not running."
+  fi
+  clear_tray_pid
+}
+
+tray_registered() {
+  qdbus org.kde.StatusNotifierWatcher /StatusNotifierWatcher \
+    org.kde.StatusNotifierWatcher.RegisteredStatusNotifierItems 2>/dev/null \
+    | grep -Eiq 'thirdflare|ThirdFlare'
+}
+
+start_tray_daemon() {
+  local py script tray_pid
+  py="$(tray_python_bin)"
+  script="$1"
+  if command -v setsid >/dev/null 2>&1; then
+    nohup setsid env THIRDFLARE_APP_DIR="$APP_DIR" "$py" -u "$script" >>"$TRAY_LOG_FILE" 2>&1 &
+  else
+    nohup env THIRDFLARE_APP_DIR="$APP_DIR" "$py" -u "$script" >>"$TRAY_LOG_FILE" 2>&1 &
+  fi
+  tray_pid="$!"
+  record_tray_pid "$tray_pid"
+  printf '%s\n' "$tray_pid"
+}
+
+wait_for_tray() {
+  local tray_pid="$1"
+  local label="$2"
+  local i
+  for i in $(seq 1 30); do
+    if ! kill -0 "$tray_pid" 2>/dev/null; then
+      echo "ThirdFlare One tray failed to start. Log: $TRAY_LOG_FILE" >&2
+      tail -n 20 "$TRAY_LOG_FILE" >&2 || true
+      clear_tray_pid
+      return 1
+    fi
+    if tray_process_running && { tray_registered || [[ "$i" -ge 15 ]]; }; then
+      echo "ThirdFlare One tray started ($label, pid $tray_pid)." >&2
+      echo "Left-click the tray icon for the native ThirdFlare One app; right-click for the menu." >&2
+      if command -v notify-send >/dev/null 2>&1; then
+        notify-send "ThirdFlare One" "Tray started — look for the icon in the system tray." \
+          --icon=thirdflare-one >/dev/null 2>&1 || \
+        notify-send "ThirdFlare One" "Tray started — look for the icon in the system tray." \
+          --icon="$ICON" >/dev/null 2>&1 || true
+      fi
+      return 0
+    fi
+    sleep 0.2
+  done
+  echo "ThirdFlare One tray is running (pid $tray_pid) but KDE has not registered it yet." >&2
+  echo "Log: $TRAY_LOG_FILE" >&2
+  return 0
+}
+
+run_tray_qt() {
+  local tray_pid
+  ensure_daemon
+  mkdir -p "$RUNTIME_DIR" "$CACHE_DIR"
+
+  if tray_already_running; then
+    echo "ThirdFlare One tray is already running." >&2
+    tray_registered && echo "Tray icon is registered with KDE." >&2
+    return 0
   fi
 
-  local menu
-  menu="Open GUI!$LAUNCHER|Connect WARP!$LAUNCHER --connect|Disconnect WARP!$LAUNCHER --disconnect|Toggle WARP!$LAUNCHER --toggle|Show Status!$APP_DIR/bin/thirdflare-tray --status|Quit!quit"
+  : > "$TRAY_LOG_FILE"
+  tray_pid="$(start_tray_daemon "$QT_TRAY")"
+  wait_for_tray "$tray_pid" "PyQt6"
+}
+
+run_tray_sni() {
+  local tray_pid
+  ensure_daemon
+  mkdir -p "$RUNTIME_DIR" "$CACHE_DIR"
+
+  if tray_already_running; then
+    echo "ThirdFlare One tray is already running." >&2
+    tray_registered && echo "Tray icon is registered with KDE." >&2
+    return 0
+  fi
+
+  : > "$TRAY_LOG_FILE"
+  tray_pid="$(start_tray_daemon "$SNI_TRAY")"
+  wait_for_tray "$tray_pid" "StatusNotifierItem"
+}
+
+run_tray_yad() {
+  ensure_daemon
+  tray_yad_env
+
+  local menu panel_cmd py warp_action
+  py="$(tray_python_bin)"
+  warp_action="env THIRDFLARE_APP_DIR=$APP_DIR $py -u $APP_DIR/scripts/tray-warp-action.py"
+  if tray_qt_available; then
+    panel_cmd="env THIRDFLARE_APP_DIR=$APP_DIR THIRDFLARE_SHOW_PANEL=1 $py -u $QT_TRAY"
+  else
+    panel_cmd="env THIRDFLARE_APP_DIR=$APP_DIR $py -u $QT_TRAY --panel"
+  fi
+  menu="Show ThirdFlare One!${panel_cmd}|Connect or Disconnect!${warp_action}|Show Status!$APP_DIR/bin/thirdflare-tray --status|Quit!quit"
+
+  echo "ThirdFlare One tray started (yad). Look for the icon in your notification area." >&2
+  echo "Left-click opens the control panel; right-click for more actions." >&2
 
   yad \
     --notification \
     --image="$ICON" \
     --text="ThirdFlare One - $(status_text)" \
-    --command="$LAUNCHER" \
+    --command="$panel_cmd" \
     --menu="$menu"
+}
+
+show_tray_panel() {
+  local pid
+  if tray_already_running; then
+    if [[ -f "$TRAY_PID_FILE" ]]; then
+      pid="$(cat "$TRAY_PID_FILE" 2>/dev/null || true)"
+      if [[ -n "$pid" ]] && kill -0 "$pid" 2>/dev/null; then
+        kill -USR1 "$pid" 2>/dev/null || true
+        echo "ThirdFlare One control panel requested (tray pid $pid)." >&2
+        return 0
+      fi
+    fi
+    echo "ThirdFlare One tray is running but panel signal failed; restarting tray with panel." >&2
+    stop_tray
+  fi
+  THIRDFLARE_SHOW_PANEL=1 run_tray
+}
+
+run_tray() {
+  local reason backend
+  reason="$(tray_diagnose)" || {
+    tray_explain "$reason"
+    return 1
+  }
+
+  backend="$(tray_backend)"
+  case "$backend" in
+    qt)
+      run_tray_qt
+      ;;
+    sni)
+      run_tray_sni
+      ;;
+    yad)
+      run_tray_yad
+      ;;
+    *)
+      tray_explain "unknown"
+      return 1
+      ;;
+  esac
+}
+
+print_check() {
+  local reason backend py
+  if reason="$(tray_diagnose)"; then
+    backend="$(tray_backend)"
+    echo "tray: ready"
+    echo "backend: $backend"
+    echo "session: ${XDG_SESSION_TYPE:-unknown}"
+    echo "desktop: ${XDG_CURRENT_DESKTOP:-unknown}"
+    if tray_qt_available; then
+      py="$(tray_python_bin)"
+      echo "qt: $py + PyQt6"
+    else
+      echo "qt: unavailable"
+    fi
+    if tray_sni_available; then
+      py="$(tray_python_bin)"
+      echo "sni: $py + AppIndicator"
+    else
+      echo "sni: unavailable"
+    fi
+    if tray_yad_available; then
+      echo "yad: $(command -v yad)"
+    else
+      echo "yad: unavailable"
+    fi
+    if tray_prefers_sni; then
+      echo "note: KDE Plasma / Wayland uses StatusNotifierItem (not yad XEmbed icons)"
+    fi
+    return 0
+  fi
+
+  echo "tray: unavailable ($reason)"
+  tray_explain "$reason" >&2
+  return 1
 }
 
 case "${1:-}" in
   --help|-h)
     usage
     ;;
+  --check)
+    print_check
+    ;;
+  --stop)
+    stop_tray
+    ;;
   --status)
-    notify_status
+    if tray_qt_available && [[ "${2:-}" != "--force-shell" ]]; then
+      THIRDFLARE_APP_DIR="$APP_DIR" "$(tray_python_bin)" "$QT_TRAY" --status
+    elif tray_sni_available && [[ "${2:-}" != "--force-shell" ]]; then
+      THIRDFLARE_APP_DIR="$APP_DIR" "$(tray_python_bin)" "$SNI_TRAY" --status
+    else
+      notify_status
+    fi
+    ;;
+  --panel)
+    show_tray_panel
     ;;
   "")
     run_tray

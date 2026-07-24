@@ -4,14 +4,14 @@ Thank you for helping improve ThirdFlare One. This guide covers local setup, the
 
 > **Product name:** Use **ThirdFlare One** in user-facing text (UI, docs, commit descriptions). The short CLI name is `thirdflare` / `thirdflare-one`.
 
-Repository: [github.com/oldrepublicwizard/thirdflare-one](https://github.com/oldrepublicwizard/thirdflare-one)
+Repository: [github.com/bodencrouch/thirdflare-one](https://github.com/bodencrouch/thirdflare-one)
 
 ---
 
 ## Quick contributor setup
 
 ```bash
-git clone https://github.com/oldrepublicwizard/thirdflare-one.git
+git clone https://github.com/bodencrouch/thirdflare-one.git
 cd thirdflare-one
 npm install
 
@@ -65,16 +65,21 @@ thirdflare-one/                 # repo root (operator entrypoint)
 ├── server.js                   # HTTP API + warp-cli orchestration
 ├── bin/
 │   ├── thirdflare              # launcher (daemon lifecycle, browser, warp actions)
-│   ├── thirdflare-tray         # optional yad tray
+│   ├── thirdflare-tray         # PyQt6 native shell + tray (SNI/yad fallback)
 │   ├── thirdflare-one-gui      # alias → thirdflare
 │   └── thirdflare-one-tray     # alias → thirdflare-tray
 ├── lib/
 │   ├── config.mjs              # layered configuration merge
 │   ├── version.mjs
 │   ├── warp/                   # status + registration parsers
+│   ├── tray/                   # XDG autostart sync
 │   ├── notify/                 # libnotify / status watcher
 │   ├── killswitch/             # nftables rule generation + apply
 │   └── update/                 # GitHub release checks, AppImage apply
+├── scripts/
+│   ├── tray-qt.py              # PyQt6 embedded Web UI
+│   ├── thirdflare-nft-apply    # polkit-scoped kill-switch helper
+│   └── mock-warp-cli.mjs       # CI mock
 ├── public/                     # Web UI (app.js, i18n, locales/, PWA shell)
 ├── config/
 │   ├── config.example.json     # documented defaults
@@ -224,11 +229,12 @@ New scripts should use `set -euo pipefail`. CI runs `shellcheck` on Linux for `t
 | Add config key | `lib/config.mjs`, `config/config.example.json`, `docs/CONFIGURATION.md` |
 | Add update format / install detection | `lib/update/detect-format.mjs`, `lib/update/index.mjs` |
 | Add desktop notification | `lib/notify/` |
-| Add kill-switch behavior | `lib/killswitch/rules.mjs` (unit tests in `ci-killswitch.test.mjs`) |
+| Add kill-switch behavior | `lib/killswitch/rules.mjs`, `scripts/thirdflare-nft-apply`, `packaging/polkit/` (unit tests in `ci-killswitch.test.mjs`, `ci-polkit-helper.test.mjs`) |
+| Add tray / native shell behavior | `scripts/tray-qt.py`, `bin/thirdflare-tray`, `lib/tray/autostart.mjs` |
 | Add locale string | `public/locales/en.json` + `public/i18n.js` patterns |
 | Add packaging format | `packaging/scripts/`, `packaging/nfpm.yaml` or format-specific manifest |
 
-Parity with the Windows Cloudflare One app is tracked in-app on the **Parity** page — new surfaces should update that matrix when possible.
+Parity with the Windows Cloudflare One app is tracked via the native simple shell and expert Web UI — extend both when adding major surfaces.
 
 ---
 
@@ -260,10 +266,9 @@ Include:
 
 High-impact areas:
 
-- Native shells (Electron, Tauri, AppIndicator) — Web UI is v1
+- AppImage-bundled PyQt6/WebEngine (Phase 2 — host deps documented today)
+- Self-contained Tauri/Electron shell (optional alternative to PyQt6)
 - Windows visual parity
-- polkit privilege broker for kill-switch apply
-- Parity audits vs official Cloudflare One
 - Documentation and localization (`public/locales/`)
 
 Read **[docs/STRATEGY.md](STRATEGY.md)** for product direction.

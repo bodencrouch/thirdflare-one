@@ -21,9 +21,12 @@
   "updates": {
     "channel": "stable",
     "source": {
-      "owner": "oldrepublicwizard",
+      "owner": "bodencrouch",
       "repo": "thirdflare-one"
     },
     "checkOnStartup": true
+  },
+  "tray": {
+    "autostart": false
   }
 }

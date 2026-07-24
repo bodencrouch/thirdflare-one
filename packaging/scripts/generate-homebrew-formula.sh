@@ -9,7 +9,7 @@ TARBALL="${ROOT}/dist/packages/thirdflare-one-${VERSION}-src.tar.gz"
 TAG="v${VERSION}"
 
 mkdir -p "$(dirname "$OUT")"
-URL="https://github.com/oldrepublicwizard/thirdflare-one/releases/download/${TAG}/thirdflare-one-${VERSION}-src.tar.gz"
+URL="https://github.com/bodencrouch/thirdflare-one/releases/download/${TAG}/thirdflare-one-${VERSION}-src.tar.gz"
 SHA256="$(sha256sum "$TARBALL" | awk '{print $1}')"
 
 sed -e "s|__URL__|${URL}|g" -e "s|__SHA256__|${SHA256}|g" "$TEMPLATE" > "$OUT"

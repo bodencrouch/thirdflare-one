@@ -6,7 +6,7 @@ ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 VERSION="${1:-$(node -p "require('${ROOT}/package.json').version")}"
 TAG="v${VERSION}"
 APPIMAGE="thirdflare-${VERSION}-x86_64.AppImage"
-BASE="https://github.com/oldrepublicwizard/thirdflare-one/releases/download/${TAG}/${APPIMAGE}"
+BASE="https://github.com/bodencrouch/thirdflare-one/releases/download/${TAG}/${APPIMAGE}"
 OUT="${ROOT}/dist/appimagehub-${VERSION}.yml"
 
 SHA=""
@@ -40,7 +40,7 @@ if [[ -z "${GH_PAT:-}" ]]; then
   exit 0
 fi
 
-HUB_FORK="${APPIMAGEHUB_FORK:-oldrepublicwizard/appimage.github.io}"
+HUB_FORK="${APPIMAGEHUB_FORK:-bodencrouch/appimage.github.io}"
 BRANCH="thirdflare-one-${VERSION}"
 WORKDIR="$(mktemp -d)"
 trap 'rm -rf "$WORKDIR"' EXIT

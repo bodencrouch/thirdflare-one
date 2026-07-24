@@ -4,10 +4,10 @@ set -euo pipefail
 ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)"
 VERSION="${PACKAGE_VERSION:-$(node -p "require('${ROOT}/package.json').version")}"
 OUT="${ROOT}/dist/packages"
-MANIFEST="${ROOT}/packaging/flatpak/io.github.oldrepublicwizard.ThirdFlareOne.yml"
+MANIFEST="${ROOT}/packaging/flatpak/io.github.bodencrouch.ThirdFlareOne.yml"
 BUILD_DIR="${ROOT}/packaging/flatpak/build"
 REPO_DIR="${ROOT}/packaging/flatpak/repo"
-APP_ID="io.github.oldrepublicwizard.ThirdFlareOne"
+APP_ID="io.github.bodencrouch.ThirdFlareOne"
 METAINFO="${ROOT}/packaging/flatpak/metainfo.xml"
 
 mkdir -p "$OUT" "$BUILD_DIR" "$REPO_DIR"

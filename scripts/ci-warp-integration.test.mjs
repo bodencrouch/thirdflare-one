@@ -169,7 +169,7 @@ test("/api/version returns channel and source", async () => {
   assert.equal(res.json.ok, true);
   assert.ok(res.json.version);
   assert.equal(res.json.channel, "stable");
-  assert.equal(res.json.source.owner, "oldrepublicwizard");
+  assert.equal(res.json.source.owner, "bodencrouch");
 });
 
 test("/api/snapshot reports warp daemon and network debug", async () => {
@@ -228,7 +228,18 @@ test("every DNS families value sticks", async () => {
     assert.equal(res.status, 200, `setFamilies ${families}`);
     const snap = await httpJson("GET", "/api/snapshot");
     assert.match(snap.json.commands.settings.stdout, new RegExp(`DNS Families:\\s*${families}`));
+    assert.equal(snap.json.settings["DNS Families"], families);
   }
+});
+
+test("DNS log enable and disable update snapshot settings", async () => {
+  assert.equal((await action("dnsLogEnable")).status, 200);
+  let snap = await httpJson("GET", "/api/snapshot");
+  assert.equal(snap.json.settings["DNS logging"], "enabled");
+
+  assert.equal((await action("dnsLogDisable")).status, 200);
+  snap = await httpJson("GET", "/api/snapshot");
+  assert.equal(snap.json.settings["DNS logging"], "disabled");
 });
 
 test("every MASQUE option sticks", async () => {
@@ -343,6 +354,22 @@ test("GET /api/killswitch includes enrollmentPause object", async () => {
   assert.equal(res.status, 200);
   assert.equal(typeof res.json.enrollmentPause, "object");
   assert.equal(typeof res.json.enrollmentPause.paused, "boolean");
+});
+
+test("POST /api/config/tray-autostart persists and syncs desktop entry", async () => {
+  const bad = await httpJson("POST", "/api/config/tray-autostart", { autostart: "yes" });
+  assert.equal(bad.status, 400);
+
+  const enable = await httpJson("POST", "/api/config/tray-autostart", { autostart: true });
+  assert.equal(enable.status, 200);
+  assert.equal(enable.json.ok, true);
+  assert.equal(enable.json.config?.tray?.autostart, true);
+  assert.equal(enable.json.sync?.enabled, true);
+
+  const disable = await httpJson("POST", "/api/config/tray-autostart", { autostart: false });
+  assert.equal(disable.status, 200);
+  assert.equal(disable.json.config?.tray?.autostart, false);
+  assert.equal(disable.json.sync?.removed, true);
 });
 
 test("POST /api/action applyLicense and registerOrganization validate input", async () => {

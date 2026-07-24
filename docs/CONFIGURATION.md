@@ -52,7 +52,7 @@ sudo cp packaging/thirdflare.default /etc/default/thirdflare
 
 Flatpak builds call `flatpak-spawn --host` automatically when `cli` is `warp-cli`.
 
-**Kill switch:** Linux `warp-cli` has no public Always On toggle. ThirdFlare installs table `inet thirdflare_killswitch` (via `nft` or `pkexec nft`) so outbound traffic is dropped unless it uses `lo`, `CloudflareWARP`, or Cloudflare bootstrap/ingress IPs. Requires nftables and privilege to load rules. Successful toggles persist to the user config file.
+**Kill switch:** Linux `warp-cli` has no public Always On toggle. ThirdFlare installs table `inet thirdflare_killswitch` (via `nft` or `pkexec thirdflare-nft-apply`) so outbound traffic is dropped unless it uses `lo`, `CloudflareWARP`, or Cloudflare bootstrap/ingress IPs. Requires nftables and privilege to load rules. Successful toggles persist to the user config file.
 
 Zero Trust browser/IdP enrollment cannot reach `*.cloudflareaccess.com` / corporate IdPs while the filter is active. ThirdFlare **pauses** the kill switch (removes rules, does not clear persisted desired) when you open the Access portal, run `registerOrganization`, or submit a `registrationToken`. Completing a registration token restores the kill switch; otherwise it auto-resumes after 30 minutes. `POST /api/killswitch/enrollment-pause` with `{ "mode": "begin" | "end" }` controls this explicitly.
 
@@ -74,6 +74,12 @@ Zero Trust browser/IdP enrollment cannot reach `*.cloudflareaccess.com` / corpor
 | `checkOnStartup` | boolean | `true` | Non-blocking update toast when Web UI is open |
 
 See [UPDATES.md](UPDATES.md) for the release → client pipeline.
+
+### `tray`
+
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `autostart` | boolean | `false` | Write `~/.config/autostart/thirdflare-one-tray.desktop` so the tray starts at desktop login (Linux). **Persisted** via `POST /api/config/tray-autostart` or App → General toggle |
 
 ## Environment variables
 

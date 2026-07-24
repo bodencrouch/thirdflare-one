@@ -11,7 +11,7 @@ description: |-
   Drop-in warp-cli GUI parity with the Windows Cloudflare One app.
   Requires Cloudflare WARP (warp-cli) on the host.
 vendor: ThirdFlare One
-homepage: https://github.com/oldrepublicwizard/thirdflare-one
+homepage: https://github.com/bodencrouch/thirdflare-one
 license: MIT
 contents:
   - src: ./dist/payload/usr/lib/thirdflare
@@ -28,6 +28,12 @@ contents:
     dst: /usr/bin/thirdflare-one-gui
     file_info:
       mode: 0755
+  - src: ./dist/payload/usr/bin/thirdflare-one-tray
+    dst: /usr/bin/thirdflare-one-tray
+    file_info:
+      mode: 0755
+  - src: ./dist/payload/usr/share/polkit-1/actions/com.thirdflare.one.policy
+    dst: /usr/share/polkit-1/actions/com.thirdflare.one.policy
   - src: ./dist/payload/usr/share/applications/thirdflare-one.desktop
     dst: /usr/share/applications/thirdflare-one.desktop
   - src: ./dist/payload/usr/share/icons/hicolor/scalable/apps/thirdflare.svg
@@ -45,6 +51,8 @@ contents:
 depends:
   - nodejs
 recommends:
+  - python3-pyqt6
+  - python3-pyqt6-webengine
   - yad
   - libnotify-bin
 overrides:
@@ -55,12 +63,16 @@ overrides:
     depends:
       - "nodejs >= 20"
     recommends:
+      - python3-pyqt6
+      - python3-pyqt6-webengine
       - yad
       - libnotify
   archlinux:
     depends:
       - nodejs
     recommends:
+      - python3-pyqt6
+      - python3-pyqt6-webengine
       - yad
       - libnotify
 scripts:

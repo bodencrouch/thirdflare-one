@@ -8,7 +8,7 @@ Unofficial [Cloudflare One](https://developers.cloudflare.com/cloudflare-one/) c
 
 ### End users
 
-**From a [GitHub Release](https://github.com/oldrepublicwizard/thirdflare-one/releases)** — download AppImage, `.deb`, `.rpm`, Flatpak, or Snap, then launch **ThirdFlare One** from your app menu or run:
+**From a [GitHub Release](https://github.com/bodencrouch/thirdflare-one/releases)** — download AppImage, `.deb`, `.rpm`, Flatpak, or Snap, then launch **ThirdFlare One** from your app menu or run:
 
 ```bash
 thirdflare-one
@@ -17,7 +17,7 @@ thirdflare-one
 **From source** — clone, install to a stable path, launch:
 
 ```bash
-git clone https://github.com/oldrepublicwizard/thirdflare-one.git
+git clone https://github.com/bodencrouch/thirdflare-one.git
 cd thirdflare-one
 ./thirdflare-one install
 thirdflare-one
@@ -37,7 +37,7 @@ Open **http://127.0.0.1:4173** when the Web UI is enabled.
 ### Developers
 
 ```bash
-git clone https://github.com/oldrepublicwizard/thirdflare-one.git
+git clone https://github.com/bodencrouch/thirdflare-one.git
 cd thirdflare-one
 npm install
 
@@ -114,14 +114,14 @@ Full contributor guide: **[docs/CONTRIBUTING.md](docs/CONTRIBUTING.md)**
 
 ## Distribution
 
-Prebuilt packages: **[GitHub Releases](https://github.com/oldrepublicwizard/thirdflare-one/releases)**
+Prebuilt packages: **[GitHub Releases](https://github.com/bodencrouch/thirdflare-one/releases)**
 
 ```bash
 # Container (API server — mount host warp-cli at runtime)
-docker pull ghcr.io/oldrepublicwizard/thirdflare-one:latest
+docker pull ghcr.io/bodencrouch/thirdflare-one:latest
 
 # macOS Homebrew
-brew tap oldrepublicwizard/thirdflare-one homebrew-tap
+brew tap bodencrouch/thirdflare-one homebrew-tap
 brew install thirdflare-one
 ```
 

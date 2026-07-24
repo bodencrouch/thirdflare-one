@@ -8,10 +8,10 @@ https://developers.cloudflare.com/warp-client/get-started/linux/
 
 | Artifact | Depends on | Notes |
 |----------|------------|-------|
-| `.deb` / `.rpm` / Arch `.pkg.tar.zst` | System `nodejs >= 20` | Built with [nfpm](https://nfpm.goreleaser.com/) |
+| `.deb` / `.rpm` / Arch `.pkg.tar.zst` | System `nodejs >= 20` | Built with [nfpm](https://nfpm.goreleaser.com/); recommends `python3-pyqt6` + WebEngine for tray |
 | `.AppImage` | Host `warp-cli` | Bundles Node 20; x86_64 |
-| `.flatpak` | Host `warp-cli` | Calls `flatpak-spawn --host warp-cli` |
-| `.snap` (classic) | Host `warp-cli` | Classic confinement required |
+| `.flatpak` | Host `warp-cli`, host PyQt6 for tray | Bundles Node; `thirdflare-one-tray` in app; tray needs host PyQt6 (Phase 2: bundle Qt) |
+| `.snap` (classic) | Host `warp-cli` | Classic confinement; stages `python3-pyqt6` for tray; polkit policy included |
 | `thirdflare-one-*-src.tar.gz` + `PKGBUILD` | — | For AUR / manual builds |
 | `SHA256SUMS` | — | Published with releases |
 | **Docker (ghcr.io)** | Host `warp-cli` when running container | API server + CI builder images |
@@ -40,16 +40,16 @@ See [DISTRIBUTION.md](DISTRIBUTION.md) for Flathub, Snap Store, COPR, AUR, and A
 ## Container images (GHCR)
 
 ```bash
-docker pull ghcr.io/oldrepublicwizard/thirdflare-one:latest
-docker run --rm -p 4173:4173 -e WARP_CLI=/path/to/warp-cli ghcr.io/oldrepublicwizard/thirdflare-one:latest
+docker pull ghcr.io/bodencrouch/thirdflare-one:latest
+docker run --rm -p 4173:4173 -e WARP_CLI=/path/to/warp-cli ghcr.io/bodencrouch/thirdflare-one:latest
 
-docker pull ghcr.io/oldrepublicwizard/thirdflare-one-ci:latest
+docker pull ghcr.io/bodencrouch/thirdflare-one-ci:latest
 ```
 
 ## Homebrew (macOS)
 
 ```bash
-brew tap oldrepublicwizard/thirdflare-one homebrew-tap
+brew tap bodencrouch/thirdflare-one homebrew-tap
 brew install thirdflare-one
 thirdflare-one --no-open
 ```
@@ -74,12 +74,33 @@ npm run package:verify
 ```
 /usr/bin/thirdflare
 /usr/bin/thirdflare-one
-/usr/bin/thirdflare-one-gui
+/usr/bin/thirdflare-one-tray
 /usr/lib/thirdflare/
+/usr/share/polkit-1/actions/com.thirdflare.one.policy
 /usr/share/applications/thirdflare-one.desktop
 /usr/share/icons/hicolor/scalable/apps/thirdflare.svg
+/usr/share/applications/thirdflare-one-tray.desktop
 /usr/lib/systemd/user/thirdflare-one.service
 ```
+
+Tray dependencies (recommended, not always required):
+
+| Format | Tray deps |
+|--------|-----------|
+| deb/rpm | `python3-pyqt6`, `python3-pyqt6-webengine`, `yad` (X11 fallback) |
+| Fedora COPR | same via `Recommends:` in spec |
+| Arch/AUR | `python-pyqt6`, `python-pyqt6-webengine` (optdepends) |
+| Flatpak | Host PyQt6 for native shell; finish-args include StatusNotifier |
+| Snap | `python3-pyqt6` staged; classic confinement |
+| AppImage | Host PyQt6 documented; tray scripts in AppDir |
+
+Kill switch / polkit:
+
+- deb/rpm/AppImage: `/usr/share/polkit-1/actions/com.thirdflare.one.policy`
+- Local install (`./thirdflare-one install`): copy policy manually — install script prints the command
+- Flatpak: policy in `/app/share/polkit-1/`; host `nft` may still be required via `flatpak-spawn --host`
+
+Tray autostart template: `packaging/thirdflare-one-tray.desktop` (installed to `~/.config/autostart/` when `tray.autostart` is true).
 
 Enable the user service after install:
 

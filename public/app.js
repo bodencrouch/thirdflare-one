@@ -10,7 +10,6 @@ const navItems = [
   ["diagnostics", "nav.diagnostics", "◷", "pageDiagnostics"],
   ["settings", "nav.settings", "⚙", "pageSettings"],
   ["app", "nav.app", "✦", "pageApp"],
-  ["parity", "nav.parity", "✓", "pageParity"],
   ["advanced", "nav.advanced", "⌘", "pageAdvanced"]
 ];
 
@@ -80,7 +79,36 @@ const state = {
   }
 };
 
+const EXPERT_UI_STORAGE_KEY = "thirdflare-ui-expert";
+
+const simpleNavItems = [
+  ["home", "simple.nav.home", "⌂"],
+  ["connectivity", "simple.nav.connectivity", "⎔"],
+  ["settings", "simple.nav.settings", "⚙"],
+  ["profile", "simple.nav.profile", "◎"],
+  ["about", "simple.nav.about", "☁"]
+];
+
 const app = document.querySelector("#app");
+
+function isNativeShell() {
+  return new URLSearchParams(window.location.search).get("shell") === "1";
+}
+
+function useExpertLayout() {
+  return !isNativeShell() || localStorage.getItem(EXPERT_UI_STORAGE_KEY) === "1";
+}
+
+function setExpertMode(enabled) {
+  if (enabled) {
+    localStorage.setItem(EXPERT_UI_STORAGE_KEY, "1");
+    state.view = "home";
+  } else {
+    localStorage.removeItem(EXPERT_UI_STORAGE_KEY);
+    state.view = "connectivity";
+  }
+  render();
+}
 
 function commandText(key) {
   const command = state.snapshot?.commands?.[key];
@@ -161,6 +189,18 @@ function applyConnectionToggle(button) {
   button.tabIndex = 0;
 }
 
+function wireConnectionToggle(button) {
+  if (!button) return;
+  const extraClass = button.hasAttribute("data-header-connection-toggle") ? "header-connection-toggle" : "";
+  applyConnectionToggle(button);
+  if (extraClass) button.classList.add(extraClass);
+  button.onclick = () => {
+    const next = connectionToggle();
+    if (!next.action || next.disabled) return;
+    action(next.action);
+  };
+}
+
 function el(tag, className, html = "") {
   const node = document.createElement(tag);
   if (className) node.className = className;
@@ -184,7 +224,10 @@ async function refresh({ silent = false } = {}) {
     const response = await fetch("/api/snapshot");
     state.snapshot = await response.json();
     if (state.view === "account") await loadAccount(false);
-    if (state.view === "home" || state.view === "settings") await loadKillSwitch(false);
+    const killSwitchDesired = Boolean(state.appConfig?.warp?.killSwitch);
+    if (state.view === "settings" || (state.view === "home" && killSwitchDesired)) {
+      await loadKillSwitch(false);
+    }
   } catch (error) {
     state.error = error.message;
   }
@@ -348,7 +391,251 @@ async function action(actionName, value, secondary, confirmCommand = false) {
   await refresh();
 }
 
+function dnsProtocolLabel() {
+  const mode = String(setting("Mode")).toLowerCase();
+  if (mode === "doh" || mode === "warp+doh") return "DoH";
+  if (mode === "dot" || mode === "warp+dot") return "DoT";
+  return "off";
+}
+
+function tunnelProtocolLabel() {
+  if (!state.snapshot?.status?.connected) return "N/A";
+  const value = setting("WARP tunnel protocol", "Tunnel protocol", "Protocol");
+  return value === "Unknown" ? "N/A" : value;
+}
+
+function connectionBadge() {
+  const status = state.snapshot?.status;
+  if (!state.snapshot?.daemon?.available) {
+    return { text: t("home.daemonMissing"), kind: "bad" };
+  }
+  if (!status) return { text: t("common.unknown"), kind: "warn" };
+  if (status.connecting) return { text: t("common.connecting"), kind: "warn" };
+  if (status.connected) return { text: t("simple.connected"), kind: "good" };
+  return { text: t("simple.disconnected"), kind: "bad" };
+}
+
+function cfCard(title, rows) {
+  const card = el("section", "cf-card");
+  card.innerHTML = `<div class="cf-card-title">${escapeHtml(title)}</div>`;
+  rows.forEach(([label, valueHtml]) => {
+    const row = el("div", "cf-row");
+    row.innerHTML = `<span>${escapeHtml(label)}</span><span class="cf-row-value">${valueHtml}</span>`;
+    card.append(row);
+  });
+  return card;
+}
+
+function simpleActionsBar() {
+  const bar = el("div", "simple-actions");
+  const connectBtn = el("button", "connection-toggle header-connection-toggle", "");
+  connectBtn.type = "button";
+  connectBtn.setAttribute("data-header-connection-toggle", "");
+  connectBtn.setAttribute("data-testid", "header-connection-toggle");
+  wireConnectionToggle(connectBtn);
+  connectBtn.classList.add("header-connection-toggle");
+
+  const refreshBtn = el("button", "ghost icon-button tip", "↻");
+  refreshBtn.type = "button";
+  refreshBtn.setAttribute("data-refresh", "");
+  refreshBtn.setAttribute("data-testid", "refresh-button");
+  refreshBtn.setAttribute("aria-label", t("common.refresh"));
+  refreshBtn.setAttribute("data-tip", t("common.refresh"));
+  refreshBtn.tabIndex = 0;
+  refreshBtn.onclick = refresh;
+
+  bar.append(connectBtn, refreshBtn);
+  return bar;
+}
+
+function simpleHomeView() {
+  const view = el("div", "view-stack");
+  const head = el("div", "simple-page-head");
+  head.append(el("h1", "simple-page-title", t("simple.nav.home")));
+  head.append(simpleActionsBar());
+  view.append(head);
+
+  const badge = connectionBadge();
+  const hero = el("section", "cf-card simple-hero");
+  hero.innerHTML = `
+    <div class="cf-card-title">${t("simple.tunnelConnection")}</div>
+    <div class="cf-row">
+      <span>${t("simple.connectionStatus")}</span>
+      <span class="status-badge ${badge.kind}">${escapeHtml(badge.text)}</span>
+    </div>
+    <div class="cf-row">
+      <span>${t("simple.statusLine")}</span>
+      <span class="cf-row-value">${escapeHtml(statusText())}</span>
+    </div>
+  `;
+  view.append(hero);
+  return view;
+}
+
+function simpleConnectivityView() {
+  const view = el("div", "view-stack");
+  const head = el("div", "simple-page-head");
+  head.append(el("h1", "simple-page-title", t("simple.nav.connectivity")));
+  head.append(simpleActionsBar());
+  view.append(head);
+
+  view.append(cfCard(t("simple.dnsConnection"), [
+    [t("simple.dnsProtocol"), escapeHtml(dnsProtocolLabel())]
+  ]));
+
+  const badge = connectionBadge();
+  view.append(cfCard(t("simple.tunnelConnection"), [
+    [t("simple.connectionStatus"), `<span class="status-badge ${badge.kind}">${escapeHtml(badge.text)}</span>`],
+    [t("simple.warpTunnelProtocol"), escapeHtml(tunnelProtocolLabel())]
+  ]));
+
+  const keysCard = el("section", "cf-card");
+  keysCard.innerHTML = `<div class="cf-card-title">${t("simple.encryptionKeys")}</div>`;
+  const keysRow = el("div", "cf-row cf-row-action");
+  keysRow.innerHTML = `<span>${t("simple.encryptionKeys")}</span>`;
+  const resetBtn = el("button", "secondary", t("simple.resetKeys"));
+  resetBtn.type = "button";
+  resetBtn.disabled = state.busy;
+  resetBtn.onclick = () => action("rotateKeys");
+  keysRow.append(resetBtn);
+  keysCard.append(keysRow);
+  view.append(keysCard);
+  return view;
+}
+
+function simpleSettingsView() {
+  const view = el("div", "view-stack");
+  const head = el("div", "simple-page-head");
+  head.append(el("h1", "simple-page-title", t("simple.nav.settings")));
+  head.append(simpleActionsBar());
+  view.append(head);
+
+  const expertOn = useExpertLayout();
+  const expertRow = el("div", "switch-row");
+  expertRow.innerHTML = `
+    <div class="switch-meta">
+      <strong>${t("simple.expertMode")}</strong>
+      <p>${t("simple.expertModeHint")}</p>
+    </div>
+  `;
+  const expertToggle = el("button", `switch ${expertOn ? "on" : ""}`);
+  expertToggle.type = "button";
+  expertToggle.setAttribute("role", "switch");
+  expertToggle.setAttribute("aria-checked", expertOn ? "true" : "false");
+  expertToggle.setAttribute("aria-label", t("simple.expertMode"));
+  expertToggle.onclick = () => setExpertMode(!expertOn);
+  expertRow.append(expertToggle);
+  const expertPanel = el("section", "panel");
+  expertPanel.append(expertRow);
+  view.append(expertPanel);
+
+  const trayAutostart = Boolean(state.appConfig?.tray?.autostart);
+  const trayRow = el("div", "switch-row");
+  trayRow.innerHTML = `
+    <div class="switch-meta">
+      <strong>${t("app.trayAutostart")}</strong>
+      <p>${t("app.trayAutostartHint")}</p>
+    </div>
+  `;
+  const trayToggle = el("button", `switch ${trayAutostart ? "on" : ""}`);
+  trayToggle.type = "button";
+  trayToggle.setAttribute("role", "switch");
+  trayToggle.setAttribute("aria-checked", trayAutostart ? "true" : "false");
+  trayToggle.setAttribute("aria-label", t("app.trayAutostart"));
+  trayToggle.disabled = state.busy;
+  trayToggle.onclick = () => setTrayAutostart(!trayAutostart);
+  trayRow.append(trayToggle);
+  const trayPanel = el("section", "panel");
+  trayPanel.append(trayRow);
+  view.append(trayPanel);
+
+  return view;
+}
+
+function simpleProfileView() {
+  const view = el("div", "view-stack");
+  const head = el("div", "simple-page-head");
+  head.append(el("h1", "simple-page-title", t("simple.nav.profile")));
+  head.append(simpleActionsBar());
+  view.append(head);
+
+  const account = state.account;
+  view.append(cfCard(t("account.overview"), [
+    [t("account.registered"), account?.registered ? t("account.registered") : t("account.notRegistered")],
+    [t("account.accountType"), escapeHtml(account?.accountType || t("common.unknown"))],
+    [t("account.deviceId"), escapeHtml(account?.deviceId || t("common.unknown"))]
+  ]));
+  return view;
+}
+
+function simpleAboutView() {
+  const view = el("div", "view-stack");
+  const head = el("div", "simple-page-head");
+  head.append(el("h1", "simple-page-title", t("simple.nav.about")));
+  head.append(simpleActionsBar());
+  view.append(head);
+
+  const version = state.version?.version || "…";
+  const format = state.version?.installFormat || "…";
+  view.append(cfCard(t("app.about"), [
+    [t("app.currentVersion"), escapeHtml(version)],
+    [t("app.installFormat"), escapeHtml(format)],
+    [t("brand.title"), "ThirdFlare One"]
+  ]));
+  view.append(el("p", "simple-about-copy", t("simple.aboutCopy")));
+  return view;
+}
+
+function simpleContent() {
+  const section = el("section", "simple-content");
+  const views = {
+    home: simpleHomeView,
+    connectivity: simpleConnectivityView,
+    settings: simpleSettingsView,
+    profile: simpleProfileView,
+    about: simpleAboutView
+  };
+  const renderView = views[state.view] || simpleConnectivityView;
+  section.append(renderView());
+  return section;
+}
+
+function simpleShell() {
+  document.body.classList.add("simple-ui");
+  const root = el("div", "simple-shell");
+  const sidebar = el("nav", "simple-sidebar");
+  sidebar.innerHTML = `
+    <div class="simple-brand" aria-hidden="true"><span></span></div>
+  `;
+  simpleNavItems.forEach(([id, labelKey, icon]) => {
+    const button = el("button", `simple-nav-item ${state.view === id ? "active" : ""}`);
+    button.innerHTML = `<span class="simple-nav-icon" aria-hidden="true">${icon}</span><span class="simple-nav-label">${t(labelKey)}</span>`;
+    button.setAttribute("aria-label", t(labelKey));
+    button.setAttribute("data-nav", id);
+    button.onclick = () => {
+      state.view = id;
+      render();
+      if (id === "profile") loadAccount(false).then(() => render());
+      if (id === "about") loadSimpleAbout().then(() => render());
+    };
+    sidebar.append(button);
+  });
+  root.append(sidebar, simpleContent());
+  return root;
+}
+
+async function loadSimpleAbout() {
+  if (state.version) return;
+  try {
+    const response = await fetch("/api/version");
+    state.version = await response.json();
+  } catch (error) {
+    state.error = error.message;
+  }
+}
+
 function shell() {
+  document.body.classList.remove("simple-ui");
   const root = el("div", "window-shell");
   root.append(header());
 
@@ -366,6 +653,9 @@ function shell() {
       if (id === "app") loadAppPanel();
       if (id === "account") {
         loadAccount().then(() => render());
+      }
+      if (id === "settings") {
+        loadKillSwitch(false).then(() => render());
       }
     };
     nav.append(button);
@@ -390,10 +680,12 @@ function header() {
       <div class="live-pill ${state.live.connected ? "online" : "offline"}">
         <span></span>${state.live.connected ? t("common.live") : t("common.polling")}
       </div>
-      <button class="ghost" data-refresh>${t("common.refresh")}</button>
+      <button type="button" class="connection-toggle header-connection-toggle" data-header-connection-toggle data-testid="header-connection-toggle" tabindex="0"></button>
+      <button type="button" class="ghost icon-button tip" data-refresh data-testid="refresh-button" aria-label="${escapeHtml(t("common.refresh"))}" data-tip="${escapeHtml(t("common.refresh"))}" tabindex="0">↻</button>
       <div class="traffic-dots"><i></i><i></i><i></i></div>
     </div>
   `;
+  wireConnectionToggle(node.querySelector("[data-header-connection-toggle]"));
   node.querySelector("[data-refresh]").onclick = refresh;
   return node;
 }
@@ -410,7 +702,6 @@ function content() {
     diagnostics: diagnosticsView,
     settings: settingsView,
     app: appView,
-    parity: parityView,
     advanced: advancedView
   };
   section.append(views[state.view]());
@@ -487,12 +778,7 @@ function homeView() {
     </div>
   `;
   const toggleBtn = primary.querySelector("[data-connection-toggle]");
-  applyConnectionToggle(toggleBtn);
-  toggleBtn.onclick = () => {
-    const next = connectionToggle();
-    if (!next.action || next.disabled) return;
-    action(next.action);
-  };
+  wireConnectionToggle(toggleBtn);
   const quick = el("section", "panel quick-panel");
   quick.innerHTML = `<div class="panel-heading"><h3${tipMarkup("mode")}>${t("home.quickSettings")}</h3><span>${t("home.quickHint")}</span></div>`;
   quick.append(segmented(t("home.mode"), quickModes, "setMode", setting("Mode"), tip("mode"), modeValueTips));
@@ -519,6 +805,25 @@ function segmented(label, values, actionName, current, tipText = "", valueTips =
         return;
       }
       action(actionName, value);
+    };
+    row.append(button);
+  });
+  wrap.append(row);
+  return wrap;
+}
+
+function choiceSegmented(label, choices, current, tipText = "") {
+  const wrap = el("div", "field-group");
+  const tipAttr = tipText ? ` class="tip" data-tip="${escapeHtml(tipText)}" tabindex="0"` : "";
+  wrap.innerHTML = `<label${tipAttr}>${label}</label>`;
+  const row = el("div", "segmented");
+  choices.forEach(({ value, label: choiceLabel, action: actionName, confirm = false, tipKey }) => {
+    const selected = current?.toLowerCase?.() === String(value).toLowerCase();
+    const button = el("button", selected ? "selected" : "", choiceLabel);
+    if (tipKey) applyTip(button, tipKey);
+    button.onclick = () => {
+      if (confirm && !window.confirm(`Run warp-cli action: ${choiceLabel}?`)) return;
+      action(actionName);
     };
     row.append(button);
   });
@@ -799,16 +1104,16 @@ function maskLicense(value) {
 function gatewayView() {
   const view = el("div", "view-stack");
   view.append(pageTitle("Gateway DNS", "Control DNS mode, Families filtering, logging visibility, and Gateway status.", "pageGateway"));
-  view.append(segmented("Families mode", families, "setFamilies", setting("Families mode"), tip("families"), familiesValueTips));
+  view.append(segmented("Families mode", families, "setFamilies", setting("Families mode", "DNS families"), tip("families"), familiesValueTips));
   view.append(formPanel("Gateway and fallback domains", [
     ["Gateway ID", "gatewayId", "Set Gateway ID", () => action("setGatewayId", state.forms.gatewayId, null, true), "gatewayId"],
     ["Fallback domain", "dnsFallback", "Add fallback", () => action("addDnsFallback", state.forms.dnsFallback), "dnsFallback"]
   ]));
   view.append(actionPanel("Gateway actions", [["Reset Gateway ID", "resetGatewayId", "resetGatewayId"]]));
-  view.append(actionPanel("DNS logging", [
-    ["Enable DNS log", "dnsLogEnable", "dnsLog"],
-    ["Disable DNS log", "dnsLogDisable", "dnsLog"]
-  ]));
+  view.append(choiceSegmented("DNS logging", [
+    { value: "disabled", label: "Off", action: "dnsLogDisable", tipKey: "dnsLog" },
+    { value: "enabled", label: "On", action: "dnsLogEnable", tipKey: "dnsLog" }
+  ], setting("DNS logging"), tip("dnsLog")));
   view.append(outputPanel("Fallback domains", state.snapshot?.commands?.dnsFallback, "dnsFallback"));
   view.append(outputPanel("DNS statistics", state.snapshot?.commands?.dnsStats, "dnsQueries"));
   view.append(outputPanel("Default fallbacks", state.snapshot?.commands?.dnsDefaultFallbacks, "dnsFallback"));
@@ -821,7 +1126,7 @@ function tunnelView() {
   view.append(pageTitle("Tunnel", "Switch WARP modes, tunnel protocols, proxy port, and virtual network.", "pageTunnel"));
   view.append(segmented("Operating mode", quickModes, "setMode", setting("Mode"), tip("mode"), modeValueTips));
   view.append(segmented("Preferred protocol", protocols, "setProtocol", setting("Tunnel protocol", "Protocol"), tip("protocol"), protocolValueTips));
-  view.append(segmented("MASQUE options", masqueOptions, "setMasqueOptions", setting("HTTP Version", "MASQUE Protocol Settings"), tip("masque")));
+  view.append(segmented("MASQUE options", masqueOptions, "setMasqueOptions", setting("MASQUE options"), tip("masque")));
   view.append(formPanel("Proxy and VNet", [
     ["SOCKS proxy port", "proxyPort", "Set proxy port", () => action("setProxyPort", state.forms.proxyPort), "proxyPort"],
     ["Virtual network", "vnet", "Set VNet", () => action("setVnet", state.forms.vnet), "vnet"],
@@ -836,9 +1141,37 @@ function tunnelView() {
   return view;
 }
 
+function splitTunnelGuidePanel() {
+  const panel = el("section", "panel guide-panel");
+  panel.innerHTML = `
+    <div class="panel-heading">
+      <h3${tipMarkup("splitTunnel")}>${t("splitGuide.title")}</h3>
+      <span>guide</span>
+    </div>
+    <div class="guide-section">
+      <strong>${t("splitGuide.modesTitle")}</strong>
+      <p>${t("splitGuide.modesBody")}</p>
+    </div>
+    <div class="guide-section">
+      <strong>${t("splitGuide.uiTitle")}</strong>
+      <p>${t("splitGuide.uiBody")}</p>
+    </div>
+    <div class="guide-section">
+      <strong>${t("splitGuide.perAppTitle")}</strong>
+      <p>${t("splitGuide.perAppBody")}</p>
+      <p>${t("splitGuide.perAppProxy")}</p>
+      <p>${t("splitGuide.perAppExclude")}</p>
+      <p>${t("splitGuide.konsoleNote")}</p>
+    </div>
+    <p class="guide-link"><a href="https://developers.cloudflare.com/cloudflare-one/team-and-resources/devices/cloudflare-one-client/configure/route-traffic/split-tunnels/" target="_blank" rel="noopener noreferrer">${t("splitGuide.docsLink")}</a></p>
+  `;
+  return panel;
+}
+
 function splitView() {
   const view = el("div", "view-stack");
-  view.append(pageTitle("Split Tunnel", tip("splitTunnel"), "pageSplit"));
+  view.append(pageTitle("Split Tunnel", t("splitGuide.modesBody"), "pageSplit"));
+  view.append(splitTunnelGuidePanel());
   view.append(formPanel("Routes", [
     ["IP or CIDR", "splitIp", "Add IP", () => action("addSplitIp", state.forms.splitIp), "splitIp"],
     ["Host name", "splitHost", "Add host", () => action("addSplitHost", state.forms.splitHost), "splitHost"]
@@ -877,10 +1210,10 @@ function settingsView() {
     ["Override code", "overrideCode", "Apply code", () => action("overrideCode", state.forms.overrideCode, null, true), "overrideCode"],
     ["Unlock code", "overrideCode", "Unlock", () => action("overrideUnlock", state.forms.overrideCode, null, true), "overrideUnlock"]
   ]));
-  view.append(actionPanel("Local network access", [
-    ["Allow local network", "allowLocalNetwork", "allowLocalNetwork"],
-    ["Stop local network override", "stopLocalNetworkOverride", "stopLocalNetworkOverride"]
-  ]));
+  view.append(choiceSegmented("Local network access", [
+    { value: "blocked", label: "Blocked", action: "stopLocalNetworkOverride", tipKey: "stopLocalNetworkOverride" },
+    { value: "allowed", label: "Allowed", action: "allowLocalNetwork", confirm: true, tipKey: "allowLocalNetwork" }
+  ], setting("Local network access"), tip("localNetworkOverride")));
   view.append(actionPanel("General", [
     ["Reset environment", "environmentReset", "environmentReset"],
     ["Reset all settings", "resetSettings", "resetSettings"]
@@ -914,6 +1247,42 @@ function appView() {
   };
   general.append(localeRow);
 
+  const trayAutostart = Boolean(state.appConfig?.tray?.autostart);
+  const trayRow = el("div", "switch-row");
+  trayRow.innerHTML = `
+    <div class="switch-meta">
+      <strong class="tip" data-tip="${escapeHtml(tip("trayAutostart"))}" tabindex="0">${t("app.trayAutostart")}</strong>
+      <p>${t("app.trayAutostartHint")}</p>
+    </div>
+  `;
+  const trayToggle = el("button", `switch ${trayAutostart ? "on" : ""}`);
+  trayToggle.type = "button";
+  trayToggle.setAttribute("role", "switch");
+  trayToggle.setAttribute("aria-checked", trayAutostart ? "true" : "false");
+  trayToggle.setAttribute("aria-label", t("app.trayAutostart"));
+  trayToggle.disabled = state.busy;
+  trayToggle.onclick = () => setTrayAutostart(!trayAutostart);
+  trayRow.append(trayToggle);
+  general.append(trayRow);
+
+  if (isNativeShell()) {
+    const expertRow = el("div", "switch-row");
+    expertRow.innerHTML = `
+      <div class="switch-meta">
+        <strong>${t("simple.expertMode")}</strong>
+        <p>${t("simple.expertModeOffHint")}</p>
+      </div>
+    `;
+    const expertToggle = el("button", "switch on");
+    expertToggle.type = "button";
+    expertToggle.setAttribute("role", "switch");
+    expertToggle.setAttribute("aria-checked", "true");
+    expertToggle.setAttribute("aria-label", t("simple.expertMode"));
+    expertToggle.onclick = () => setExpertMode(false);
+    expertRow.append(expertToggle);
+    general.append(expertRow);
+  }
+
   const about = el("section", "panel");
   const version = state.version?.version || "…";
   const format = state.version?.installFormat || "…";
@@ -932,7 +1301,7 @@ function appView() {
 function updatesPanel() {
   const panel = el("section", "panel updates-panel");
   const channel = state.appConfig?.updates?.channel || "stable";
-  const source = state.appConfig?.updates?.source || { owner: "oldrepublicwizard", repo: "thirdflare-one" };
+  const source = state.appConfig?.updates?.source || { owner: "bodencrouch", repo: "thirdflare-one" };
   const owner = state.update.selectedOwner || source.owner;
   const repo = state.update.selectedRepo || source.repo;
   const result = state.update.result;
@@ -1084,12 +1453,17 @@ function updatesPanel() {
     let statusText = t("app.upToDate");
     if (result.updateAvailable) statusText = t("app.updateAvailable", { version: result.latest });
     if (result.downgrade) statusText = t("app.downgradeWarn");
-    card.innerHTML = `
-      <strong>${escapeHtml(statusText)}</strong>
-      <p class="update-source-line">${escapeHtml(`${result.source?.owner || owner}/${result.source?.repo || repo}`)}</p>
-      <p>${escapeHtml(result.release?.name || result.latest || "")}</p>
-      <pre class="release-notes">${escapeHtml((result.release?.body || "").slice(0, 1200) || t("app.releaseNotes"))}</pre>
-    `;
+    card.append(el("strong", "", statusText));
+    card.append(el("p", "update-source-line", `${result.source?.owner || owner}/${result.source?.repo || repo}`));
+    card.append(el("p", "", result.release?.name || result.latest || ""));
+
+    const notes = el("div", "release-notes");
+    const body = result.release?.body || "";
+    notes.innerHTML = body.trim()
+      ? renderReleaseMarkdown(body)
+      : `<p class="muted">${escapeHtml(t("app.releaseNotes"))}</p>`;
+    card.append(notes);
+
     const cta = el("div", "button-row");
     if (result.installFormat === "appimage" && (result.updateAvailable || state.update.selectedTag)) {
       const applyBtn = el("button", "primary", t("common.apply"));
@@ -1163,6 +1537,26 @@ async function saveUpdatePrefs(partial) {
   });
   const body = await response.json();
   state.appConfig = body.config;
+}
+
+async function setTrayAutostart(enabled) {
+  state.busy = true;
+  render();
+  try {
+    const response = await fetch("/api/config/tray-autostart", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ autostart: enabled })
+    });
+    const body = await response.json();
+    if (!response.ok) throw new Error(body.error || response.statusText);
+    state.appConfig = body.config;
+    state.toast = enabled ? t("app.trayAutostartOn") : t("app.trayAutostartOff");
+  } catch (error) {
+    state.error = error.message;
+  }
+  state.busy = false;
+  render();
 }
 
 async function loadUpdateCatalog({ force = false } = {}) {
@@ -1317,11 +1711,15 @@ function trustedView() {
   view.append(formPanel("Trusted SSIDs", [
     ["SSID", "trustedSsid", "Add SSID", () => action("addTrustedSsid", state.forms.trustedSsid), "trustedSsid"]
   ], "trustedNetworks"));
-  view.append(actionPanel("Network toggles", [
-    ["Disable on Wi-Fi", "trustedWifiEnable", "trustedWifiEnable"],
-    ["Keep on Wi-Fi", "trustedWifiDisable", "trustedWifiDisable"],
-    ["Disable on Ethernet", "trustedEthernetEnable", "trustedEthernetEnable"],
-    ["Keep on Ethernet", "trustedEthernetDisable", "trustedEthernetDisable"],
+  view.append(choiceSegmented("On Wi-Fi", [
+    { value: "keep", label: "Keep WARP on", action: "trustedWifiDisable", tipKey: "trustedWifiDisable" },
+    { value: "disable", label: "Disable WARP", action: "trustedWifiEnable", confirm: true, tipKey: "trustedWifiEnable" }
+  ], setting("Wi-Fi WARP"), tip("trustedNetworks")));
+  view.append(choiceSegmented("On Ethernet", [
+    { value: "keep", label: "Keep WARP on", action: "trustedEthernetDisable", tipKey: "trustedEthernetDisable" },
+    { value: "disable", label: "Disable WARP", action: "trustedEthernetEnable", confirm: true, tipKey: "trustedEthernetEnable" }
+  ], setting("Ethernet WARP"), tip("trustedNetworks")));
+  view.append(actionPanel("SSID list", [
     ["Reset SSIDs", "resetTrustedSsids", "resetTrustedSsids"]
   ]));
   view.append(outputPanel("Trusted SSIDs", state.snapshot?.commands?.trustedSsids, "trustedSsid"));
@@ -1355,43 +1753,6 @@ function advancedView() {
     ].join("\\n")
   }, "pageAdvanced"));
   return view;
-}
-
-function parityView() {
-  const view = el("div", "view-stack");
-  view.append(pageTitle("Windows parity audit", "Track which Windows WARP app surfaces are covered by this Linux GUI and which still require native integration.", "pageParity"));
-  view.append(parityPanel("Implemented GUI coverage", [
-    ["Current connection state", "Live status stream, connect/disconnect, daemon health, tunnel/DNS metrics."],
-    ["Account and registration", "Registration show/new/delete, organization, devices, license, token, key rotation."],
-    ["Kill switch (nftables)", "ThirdFlare-managed output filter with enroll pause for Zero Trust IdP/browser; optional LAN allow. Uses nft/pkexec."],
-    ["Gateway DNS", "Families mode, DNS logging, fallback domains, default fallbacks, Gateway ID override."],
-    ["Tunnel controls", "Mode, tunnel protocol, MASQUE options, endpoint, proxy port, VNet, split tunnel routes."],
-    ["Trusted networks", "SSID list/add/reset plus Wi-Fi and Ethernet disable toggles."],
-    ["Zero Trust policy", "Compliance environment, MDM configs, support URL, mode-switch policy, overrides."],
-    ["Diagnostics", "Stats, tunnel stats, DNS stats, certs, DEX, posture, network, alternate network."],
-    ["Desktop integration", "Desktop launcher, menu entry, icon, installable web app manifest, shell cache."],
-    ["Tray quick menu", "Optional yad tray menu for open, connect, disconnect, toggle, and status actions."],
-    ["Notification center", "Daemon emits native desktop notifications on WARP connect/disconnect via notify-send (ui.notifications)."]
-  ], "done"));
-  view.append(parityPanel("Remaining native gaps", [
-    ["First-class tray packaging", "The yad tray works when available; a bundled AppIndicator/Electron/Tauri tray still needs native packaging."],
-    ["Native packaging", "Needs Electron, Tauri, WebKitGTK, or distro packages for a self-contained app."],
-    ["Official Always On CLI", "Linux warp-cli has no public Always On / lock switch; ThirdFlare uses nftables instead of the Windows-native toggle."],
-    ["Privileged flows", "Kill switch and some policy commands may need polkit/pkexec when the daemon is unprivileged."],
-    ["Exact Windows visuals", "The shell is Windows-like, but not a pixel clone of the proprietary Windows client."]
-  ], "gap"));
-  return view;
-}
-
-function parityPanel(title, items, kind) {
-  const panel = el("section", "panel parity-panel");
-  panel.innerHTML = `<div class="panel-heading"><h3>${title}</h3><span>${items.length} items</span></div>`;
-  const list = el("div", "parity-list");
-  items.forEach(([label, copy]) => {
-    list.append(el("div", `parity-item ${kind}`, `<span>${kind === "done" ? "✓" : "!"}</span><div><strong>${label}</strong><p>${copy}</p></div>`));
-  });
-  panel.append(list);
-  return panel;
 }
 
 function actionPanel(title, actions, titleTipKey = "") {
@@ -1442,8 +1803,68 @@ function outputPanel(title, result, tipKey = "") {
   return panel;
 }
 
+function renderReleaseMarkdown(raw) {
+  const text = String(raw || "").slice(0, 4000);
+  if (!text.trim()) return "";
+
+  const lines = text.split(/\r?\n/);
+  const out = [];
+  let inList = false;
+
+  const closeList = () => {
+    if (inList) {
+      out.push("</ul>");
+      inList = false;
+    }
+  };
+
+  const inline = (line) => {
+    let html = escapeHtml(line);
+    html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_, label, url) => {
+      const href = /^https?:\/\//i.test(url.trim()) ? url.trim() : "#";
+      return `<a href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer">${label}</a>`;
+    });
+    html = html.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+    html = html.replace(/`([^`]+)`/g, "<code>$1</code>");
+    return html;
+  };
+
+  for (const line of lines) {
+    const trimmed = line.trimEnd();
+    if (/^### /.test(trimmed)) {
+      closeList();
+      out.push(`<h4>${inline(trimmed.slice(4))}</h4>`);
+      continue;
+    }
+    if (/^## /.test(trimmed)) {
+      closeList();
+      out.push(`<h3>${inline(trimmed.slice(3))}</h3>`);
+      continue;
+    }
+    if (/^# /.test(trimmed)) {
+      closeList();
+      out.push(`<h2>${inline(trimmed.slice(2))}</h2>`);
+      continue;
+    }
+    if (/^[*-] /.test(trimmed)) {
+      if (!inList) {
+        out.push("<ul>");
+        inList = true;
+      }
+      out.push(`<li>${inline(trimmed.slice(2))}</li>`);
+      continue;
+    }
+    closeList();
+    if (!trimmed.trim()) continue;
+    out.push(`<p>${inline(trimmed)}</p>`);
+  }
+
+  closeList();
+  return out.join("");
+}
+
 function escapeHtml(value) {
-  return value
+  return String(value ?? "")
     .replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;")
     .replaceAll(">", "&gt;")
@@ -1451,7 +1872,7 @@ function escapeHtml(value) {
 }
 
 function contentScrollEl() {
-  return app.querySelector(".content");
+  return app.querySelector(".content") || app.querySelector(".simple-content");
 }
 
 function captureScroll() {
@@ -1490,7 +1911,15 @@ function patchLiveChrome() {
     }
   }
 
-  if (state.view !== "home" || !state.snapshot) return;
+  applyConnectionToggle(app.querySelector("[data-header-connection-toggle]"));
+  const headerToggle = app.querySelector("[data-header-connection-toggle]");
+  if (headerToggle) headerToggle.classList.add("header-connection-toggle");
+
+  if (useExpertLayout()) {
+    if (state.view !== "home" || !state.snapshot) return;
+  } else if (state.view !== "home" && state.view !== "connectivity") {
+    return;
+  }
 
   const orb = app.querySelector(".status-orb");
   if (orb) orb.className = `status-orb ${statusKind()}`;
@@ -1530,7 +1959,7 @@ function render() {
   const scroll = captureScroll();
   const previousView = render.lastView;
   app.innerHTML = "";
-  app.append(shell());
+  app.append(useExpertLayout() ? shell() : simpleShell());
   if (state.busy) app.append(el("div", "busy", "Running warp-cli command..."));
   if (state.error) app.append(el("div", "toast", escapeHtml(state.error)));
   if (state.toast) {
@@ -1563,6 +1992,9 @@ async function boot() {
   await loadLocale(locale);
   state.killswitch.desired = Boolean(state.appConfig?.warp?.killSwitch);
   state.killswitch.allowLan = Boolean(state.appConfig?.warp?.killSwitchAllowLan);
+  if (isNativeShell() && !useExpertLayout()) {
+    state.view = "connectivity";
+  }
   render();
   await refresh();
   connectLiveEvents();
@@ -1605,8 +2037,13 @@ function connectLiveEvents() {
     const statusChanged = before !== after;
 
     // Avoid full DOM rebuilds on every status line — those reset scroll / steal focus.
-    if (statusChanged && state.view === "home" && !hasFocusedField()) {
-      render();
+    if (statusChanged && !hasFocusedField()) {
+      const simpleStatusView = !useExpertLayout() && (state.view === "home" || state.view === "connectivity");
+      if ((useExpertLayout() && state.view === "home") || simpleStatusView) {
+        render();
+      } else {
+        patchLiveChrome();
+      }
     } else {
       patchLiveChrome();
     }

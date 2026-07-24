@@ -2,9 +2,9 @@
 # https://packit.dev/docs/configuration/
 #
 # One-time: enable Packit on the GitHub repo and create COPR project
-# oldrepublicwizard/thirdflare-one
+# bodencrouch/thirdflare-one
 
-upstream_project_url: https://github.com/oldrepublicwizard/thirdflare-one
+upstream_project_url: https://github.com/bodencrouch/thirdflare-one
 upstream_package_name: thirdflare-one
 downstream_package_name: thirdflare-one
 specfile_path: packaging/fedora/thirdflare-one.spec
@@ -21,5 +21,5 @@ jobs:
     metadata:
       targets:
         - fedora-all
-      owner: oldrepublicwizard
+      owner: bodencrouch
       project: thirdflare-one

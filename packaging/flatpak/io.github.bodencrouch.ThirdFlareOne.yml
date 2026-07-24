@@ -1,16 +1,8 @@
-# Flathub submission manifest
-#
-# Copy or symlink this file into a PR against https://github.com/flathub/flathub
-# as: io.github.oldrepublicwizard.ThirdFlareOne.yml
-#
-# Update `tag` and `commit` on each release (or use FLATHUB_PAT automation).
-
-app-id: io.github.oldrepublicwizard.ThirdFlareOne
+app-id: io.github.bodencrouch.ThirdFlareOne
 runtime: org.freedesktop.Platform
 runtime-version: "24.08"
 sdk: org.freedesktop.Sdk
 command: thirdflare-one
-
 finish-args:
   - --share=network
   - --share=ipc
@@ -20,9 +12,11 @@ finish-args:
   - --device=dri
   - --filesystem=xdg-run/
   - --filesystem=xdg-cache/
+  - --filesystem=xdg-config/
   - --talk-name=org.freedesktop.Flatpak
   - --talk-name=org.freedesktop.Notifications
-
+  - --talk-name=org.kde.StatusNotifierWatcher
+  - --talk-name=org.ayatana.Notification
 modules:
   - name: node
     buildsystem: simple
@@ -43,8 +37,7 @@ modules:
       - |
         install -d /app/lib/thirdflare
         cp -a server.js package.json public assets scripts bin lib config /app/lib/thirdflare/
-        cp thirdflare-one /app/lib/thirdflare/ 2>/dev/null || true
-        chmod 0755 /app/lib/thirdflare/bin/*
+        chmod 0755 /app/lib/thirdflare/bin/* /app/lib/thirdflare/scripts/*.py /app/lib/thirdflare/scripts/thirdflare-nft-apply 2>/dev/null || true
         install -d /app/bin
         cat > /app/bin/thirdflare-one <<'EOF'
         #!/bin/bash
@@ -53,18 +46,34 @@ modules:
         exec /app/lib/thirdflare/bin/thirdflare "$@"
         EOF
         chmod 0755 /app/bin/thirdflare-one
+        cat > /app/bin/thirdflare-one-tray <<'EOF'
+        #!/bin/bash
+        export PATH="/app/lib/node/bin:/app/bin:${PATH}"
+        exec /app/lib/thirdflare/bin/thirdflare-tray "$@"
+        EOF
+        chmod 0755 /app/bin/thirdflare-one-tray
+        install -Dm644 packaging/polkit/com.thirdflare.one.policy \
+          /app/share/polkit-1/actions/com.thirdflare.one.policy
         install -Dm644 packaging/thirdflare-one.desktop \
-          /app/share/applications/io.github.oldrepublicwizard.ThirdFlareOne.desktop
+          /app/share/applications/io.github.bodencrouch.ThirdFlareOne.desktop
         sed -i \
           -e 's|^Exec=.*|Exec=thirdflare-one|' \
-          -e 's|^Icon=.*|Icon=io.github.oldrepublicwizard.ThirdFlareOne|' \
-          /app/share/applications/io.github.oldrepublicwizard.ThirdFlareOne.desktop
+          -e 's|^Icon=.*|Icon=io.github.bodencrouch.ThirdFlareOne|' \
+          /app/share/applications/io.github.bodencrouch.ThirdFlareOne.desktop
+        sed -i '/^\[Desktop Action/,/^$/ s|^Icon=.*|Icon=io.github.bodencrouch.ThirdFlareOne|' \
+          /app/share/applications/io.github.bodencrouch.ThirdFlareOne.desktop || true
         install -Dm644 assets/thirdflare.svg \
-          /app/share/icons/hicolor/scalable/apps/io.github.oldrepublicwizard.ThirdFlareOne.svg
+          /app/share/icons/hicolor/scalable/apps/io.github.bodencrouch.ThirdFlareOne.svg
         install -Dm644 packaging/flatpak/metainfo.xml \
-          /app/share/metainfo/io.github.oldrepublicwizard.ThirdFlareOne.metainfo.xml
+          /app/share/metainfo/io.github.bodencrouch.ThirdFlareOne.metainfo.xml
     sources:
-      - type: git
-        url: https://github.com/oldrepublicwizard/thirdflare-one.git
-        tag: v0.2.6
-        commit: 14570b1c13b50a52ea3d867b7781c2f0c3da9019
+      - type: dir
+        path: ../..
+        skip:
+          - dist
+          - .git
+          - agentdecompile_projects
+          - node_modules
+          - packaging/flatpak/.flatpak-builder
+          - packaging/flatpak/repo
+          - packaging/flatpak/build

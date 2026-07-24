@@ -8,11 +8,11 @@ Where to install ThirdFlare One and how each channel is published from this repo
 
 | Channel | Install command | Discoverability |
 |---------|-----------------|-----------------|
-| **GitHub Releases** | Download artifact from [Releases](https://github.com/oldrepublicwizard/thirdflare-one/releases) | Always available |
-| **Flathub** | `flatpak install flathub io.github.oldrepublicwizard.ThirdFlareOne` | After Flathub PR merge |
+| **GitHub Releases** | Download artifact from [Releases](https://github.com/bodencrouch/thirdflare-one/releases) | Always available |
+| **Flathub** | `flatpak install flathub io.github.bodencrouch.ThirdFlareOne` | After Flathub PR merge |
 | **Snap Store** | `snap install thirdflare-one --classic` | After store upload + classic review |
-| **Fedora COPR** | `dnf copr enable oldrepublicwizard/thirdflare-one && dnf install thirdflare-one` | After Packit/COPR build |
-| **Homebrew (macOS)** | `brew tap oldrepublicwizard/thirdflare-one homebrew-tap && brew install thirdflare-one` | Automated on release |
+| **Fedora COPR** | `dnf copr enable bodencrouch/thirdflare-one && dnf install thirdflare-one` | After Packit/COPR build |
+| **Homebrew (macOS)** | `brew tap bodencrouch/thirdflare-one homebrew-tap && brew install thirdflare-one` | Automated on release |
 | **AppImageHub** | Listed at [appimage.github.io](https://appimage.github.io/) | After listing PR merge |
 | **Arch AUR** | `yay -S thirdflare-one` | After AUR package publish |
 | **User install (any Linux)** | `./thirdflare-one install` from a clone | Manual |
@@ -34,13 +34,13 @@ sudo rpm -Uvh thirdflare-VERSION-1.noarch.rpm
 ### Flathub
 
 ```bash
-flatpak install flathub io.github.oldrepublicwizard.ThirdFlareOne
+flatpak install flathub io.github.bodencrouch.ThirdFlareOne
 thirdflare-one
 ```
 
-Manifest for submission: [`packaging/flathub/io.github.oldrepublicwizard.ThirdFlareOne.yml`](../packaging/flathub/io.github.oldrepublicwizard.ThirdFlareOne.yml)
+Manifest for submission: [`packaging/flathub/io.github.bodencrouch.ThirdFlareOne.yml`](../packaging/flathub/io.github.bodencrouch.ThirdFlareOne.yml)
 
-**Migration:** Older sideloaded `.flatpak` bundles used app ID `io.github.cloudflare_one_gui_linux.CloudflareOneGui`. Flathub and new builds use `io.github.oldrepublicwizard.ThirdFlareOne`.
+**Migration:** Older sideloaded `.flatpak` bundles used app ID `io.github.cloudflare_one_gui_linux.CloudflareOneGui`. Flathub and new builds use `io.github.bodencrouch.ThirdFlareOne`.
 
 ### Snap Store
 
@@ -53,7 +53,7 @@ Classic confinement is required so the snap can reach the host `warp-cli` and WA
 ### Fedora COPR
 
 ```bash
-sudo dnf copr enable oldrepublicwizard/thirdflare-one
+sudo dnf copr enable bodencrouch/thirdflare-one
 sudo dnf install thirdflare-one
 ```
 
@@ -62,7 +62,7 @@ Builds are triggered from release tags via [Packit](https://packit.dev) (see [`.
 ### Homebrew (macOS)
 
 ```bash
-brew tap oldrepublicwizard/thirdflare-one homebrew-tap
+brew tap bodencrouch/thirdflare-one homebrew-tap
 brew install thirdflare-one
 thirdflare-one --no-open
 ```
@@ -73,7 +73,7 @@ Requires [Cloudflare WARP for macOS](https://developers.cloudflare.com/warp-clie
 
 After listing merge, AppImageHub points to the latest GitHub Release AppImage URL pattern:
 
-`https://github.com/oldrepublicwizard/thirdflare-one/releases/download/vVERSION/thirdflare-VERSION-x86_64.AppImage`
+`https://github.com/bodencrouch/thirdflare-one/releases/download/vVERSION/thirdflare-VERSION-x86_64.AppImage`
 
 Listing template: [`packaging/appimagehub/thirdflare-one.yml`](../packaging/appimagehub/thirdflare-one.yml)
 
@@ -121,7 +121,7 @@ Release flow:
 
 - [ ] Merge Flathub PR at [github.com/flathub/flathub](https://github.com/flathub/flathub) using manifest in `packaging/flathub/`
 - [ ] Register `thirdflare-one` on Snap Store; export login → `SNAPCRAFT_STORE_CREDENTIALS`
-- [ ] Enable Packit on the repo for COPR project `oldrepublicwizard/thirdflare-one`
+- [ ] Enable Packit on the repo for COPR project `bodencrouch/thirdflare-one`
 - [ ] Create AUR package `thirdflare-one` (manual or CI with `AUR_SSH_PRIVATE_KEY`)
 - [ ] Open AppImageHub PR using `packaging/appimagehub/thirdflare-one.yml`
 

@@ -27,7 +27,7 @@ There are three common paths. Pick one.
 
 ### 1. Prebuilt release (recommended for most users)
 
-Download an artifact from [GitHub Releases](https://github.com/oldrepublicwizard/thirdflare-one/releases):
+Download an artifact from [GitHub Releases](https://github.com/bodencrouch/thirdflare-one/releases):
 
 | Format | Best for |
 |--------|----------|
@@ -102,7 +102,7 @@ Remove everything including the install tree:
 No install step — good for hacking on the code:
 
 ```bash
-git clone https://github.com/oldrepublicwizard/thirdflare-one.git
+git clone https://github.com/bodencrouch/thirdflare-one.git
 cd thirdflare-one
 npm install          # devDependencies only (Playwright for UI tests)
 
@@ -177,15 +177,43 @@ Packaged `.deb`/`.rpm` installs also ship `/usr/lib/systemd/user/thirdflare-one.
 
 To enable the Web UI on the service, edit config or use a drop-in — see [CONFIGURATION.md](CONFIGURATION.md).
 
-### Optional tray menu
+### Optional tray menu (PyQt6 native shell)
 
-Requires **yad** and a graphical session:
+On KDE Plasma / Wayland, ThirdFlare One uses **PyQt6 + WebEngine** for a native tray and embedded control panel (Cloudflare One Client–style simple UI by default):
 
 ```bash
-thirdflare-one --tray
-# or
-thirdflare-one-tray
+# Fedora
+sudo dnf install python3-pyqt6 python3-pyqt6-webengine
+
+# Debian/Ubuntu
+sudo apt install python3-pyqt6 python3-pyqt6-webengine
+
+thirdflare-one-tray          # tray + native window (left-click tray icon)
+thirdflare-one-tray --panel  # show window directly
+thirdflare-one-tray --check  # verify dependencies
 ```
+
+**X11 fallback:** `yad` status-notifier menu when PyQt6 is unavailable.
+
+Packaged `.deb`/`.rpm` installs ship `/usr/bin/thirdflare-one-tray` and recommend PyQt6 packages.
+
+### Tray autostart (opt-in)
+
+Enable in **App → Settings** (simple shell) or user config:
+
+```json
+"tray": { "autostart": true }
+```
+
+This writes `~/.config/autostart/thirdflare-one-tray.desktop`. Default is **off** so headless installs are unaffected.
+
+### Always On (Linux kill switch)
+
+Linux `warp-cli` has no public Always On toggle. ThirdFlare installs nftables table `inet thirdflare_killswitch` as the equivalent — toggle in **Home → Always On (kill switch)**.
+
+**Polkit:** deb/rpm installs ship `/usr/share/polkit-1/actions/com.thirdflare.one.policy` so `pkexec thirdflare-nft-apply` prompts once. After `./thirdflare-one install`, install the policy manually if needed (see install output).
+
+**Flatpak/Snap:** kill switch apply may require host `nft` access; see [PACKAGING.md](PACKAGING.md).
 
 ---
 

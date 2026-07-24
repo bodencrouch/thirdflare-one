@@ -1,7 +1,14 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-APP_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
+_script="${BASH_SOURCE[0]}"
+while [[ -L "$_script" ]]; do
+  _dir="$(cd -- "$(dirname -- "$_script")" && pwd)"
+  _script="$(readlink "$_script")"
+  [[ "$_script" != /* ]] && _script="$_dir/$_script"
+done
+APP_DIR="$(cd -- "$(dirname -- "$_script")/.." && pwd)"
+unset _script _dir
 APP_NAME="thirdflare"
 BASE_PORT="${THIRDFLARE_PORT:-${CLOUDFLARE_ONE_GUI_PORT:-4173}}"
 PORT="$BASE_PORT"
@@ -41,15 +48,18 @@ Usage:
   thirdflare --no-open          Start/reuse the daemon (API-only by default)
   thirdflare --status           Print daemon status
   thirdflare --stop             Stop the managed daemon
+  thirdflare --warp-action       Connect or disconnect WARP via daemon API (no browser)
   thirdflare --connect          Run warp-cli connect and open the Web UI
   thirdflare --disconnect       Run warp-cli disconnect and open the Web UI
-  thirdflare --toggle           Connect if disconnected, otherwise disconnect
+  thirdflare --toggle           Connect if disconnected, otherwise disconnect (opens Web UI)
   thirdflare --warp-status      Print warp-cli status
-  thirdflare --tray             Start the optional tray menu
+  thirdflare --tray             Start the native tray + app shell (same as thirdflare-one-tray)
+  thirdflare --panel            Show the native app window (starts tray if needed)
   thirdflare --version          Print ThirdFlare One version
   thirdflare --help             Show this help
 
-Alias: thirdflare-one-gui (same binary)
+Aliases: thirdflare-one, thirdflare-one-gui (same binary)
+Tray CLI: thirdflare-one-tray (KDE/Wayland uses StatusNotifierItem; run --check to verify)
 USAGE
 }
 
@@ -207,6 +217,10 @@ case "${1:-}" in
   --stop)
     stop_server
     ;;
+  --warp-action)
+    start_server >/dev/null
+    THIRDFLARE_APP_DIR="$APP_DIR" exec python3 "$APP_DIR/scripts/tray-warp-action.py"
+    ;;
   --connect)
     run_warp_action connect
     export THIRDFLARE_WEBUI=1
@@ -230,6 +244,9 @@ case "${1:-}" in
     ;;
   --tray)
     exec "$APP_DIR/bin/thirdflare-tray"
+    ;;
+  --panel)
+    exec "$APP_DIR/bin/thirdflare-tray" --panel
     ;;
   --no-open)
     start_server

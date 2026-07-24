@@ -15,14 +15,17 @@ import {
   setSessionOverrides,
   setSessionUpdateSource,
   setSessionKillSwitch,
-  persistUserKillSwitch
+  persistUserKillSwitch,
+  persistUserTrayAutostart
 } from "./lib/config.mjs";
+import { syncTrayAutostart } from "./lib/tray/autostart.mjs";
 import { getVersion, getVersionInfo } from "./lib/version.mjs";
 import { applyUpdate, checkForUpdate, prepareApply } from "./lib/update/index.mjs";
 import { listForks, listReleases } from "./lib/update/github.mjs";
 import { detectInstallFormat } from "./lib/update/detect-format.mjs";
 import { isSafeGithubRef } from "./lib/update/detect-format.mjs";
 import { parseStatus } from "./lib/warp/status.mjs";
+import { enrichSettings, parseSettings } from "./lib/warp/settings.mjs";
 import {
   accessPortalUrl,
   isConsumerAccount,
@@ -178,15 +181,6 @@ function runWarp(args, options = {}) {
   });
 }
 
-function parseSettings(text) {
-  const settings = {};
-  for (const line of text.split(/\r?\n/)) {
-    const match = line.match(/^\s*([^:]+):\s*(.*?)\s*$/);
-    if (match) settings[match[1].trim()] = match[2].trim();
-  }
-  return settings;
-}
-
 function parseKeyValueLines(text) {
   const values = {};
   for (const line of text.split(/\r?\n/)) {
@@ -273,7 +267,9 @@ async function snapshot() {
   );
   const commands = Object.fromEntries(entries.map(([key, result]) => [key, redactCommand(result)]));
   const status = parseStatus(commands.status.stdout || commands.status.stderr);
-  const settings = parseSettings(commands.settings.stdout);
+  const settings = enrichSettings(parseSettings(commands.settings.stdout), {
+    localNetworkOverride: commands.localNetworkOverride.stdout
+  });
   const daemon = {
     available: !daemonError(commands.status),
     message: daemonError(commands.status)
@@ -566,6 +562,18 @@ async function handleApi(req, res, url) {
       return;
     }
 
+    if (req.method === "POST" && url.pathname === "/api/config/tray-autostart") {
+      const body = await readJson(req);
+      if (typeof body?.autostart !== "boolean") {
+        json(res, 400, { ok: false, error: "autostart must be a boolean" });
+        return;
+      }
+      const config = persistUserTrayAutostart({ autostart: body.autostart });
+      const sync = syncTrayAutostart({ autostart: body.autostart });
+      json(res, 200, { ok: true, config, sync });
+      return;
+    }
+
     if (req.method === "GET" && url.pathname === "/api/events") {
       res.writeHead(200, {
         "content-type": "text/event-stream; charset=utf-8",
@@ -815,6 +823,15 @@ createServer(async (req, res) => {
     })().catch((error) => {
       console.warn(`WARP kill switch apply failed: ${error.message}`);
     });
+  }
+
+  if (getConfig().tray?.autostart) {
+    try {
+      const sync = syncTrayAutostart({ autostart: true });
+      if (sync.written) console.log(`Tray autostart entry installed (${sync.path}).`);
+    } catch (error) {
+      console.warn(`Tray autostart sync failed: ${error.message}`);
+    }
   }
 
   const shutdown = () => {
