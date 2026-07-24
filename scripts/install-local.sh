@@ -152,6 +152,12 @@ if [[ -f "${INSTALL_DIR}/scripts/sync-tray-autostart.mjs" ]]; then
   THIRDFLARE_ONE_HOME="${INSTALL_DIR}" node "${INSTALL_DIR}/scripts/sync-tray-autostart.mjs" >/dev/null 2>&1 || true
 fi
 
+if [[ -x "${INSTALL_DIR}/scripts/thirdflare-nm" ]] && command -v nmcli >/dev/null 2>&1; then
+  THIRDFLARE_ONE_HOME="${INSTALL_DIR}" "${INSTALL_DIR}/scripts/thirdflare-nm" --user --no-reload >/dev/null 2>&1 || true
+  echo "NetworkManager WARP profiles installed (MASQUE, WireGuard, local proxy)."
+  echo "  Optional: ${INSTALL_DIR}/scripts/thirdflare-nm --system  (dispatcher + sysctl, needs pkexec)"
+fi
+
 if [[ "$WITH_SERVICE" -eq 1 ]]; then
   mkdir -p "$SYSTEMD_USER_DIR"
   rm -f "${SYSTEMD_USER_DIR}/thirdflare.service" "${SYSTEMD_USER_DIR}/cloudflare-one-gui.service"

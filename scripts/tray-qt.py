@@ -128,6 +128,10 @@ def status_text(launcher: str) -> str:
   return capture_text([launcher, "--warp-status"]) or "ThirdFlare One"
 
 
+def tray_tooltip(status: str) -> str:
+  return f"ThirdFlare One\nStatus: {status}\nLeft-click: panel · Right-click: menu"
+
+
 def notify_status(root: str, launcher: str) -> None:
   text = status_text(launcher)
   print(text)
@@ -199,7 +203,7 @@ def run_tray_app(show_window_on_start: bool = False) -> int:
     return 1
 
   tray = QSystemTrayIcon(QIcon(icon_path))
-  tray.setToolTip(f"ThirdFlare One - {status_text(launcher)}")
+  tray.setToolTip(tray_tooltip(status_text(launcher)))
 
   window = NativeShellWindow(tray)
 
@@ -236,9 +240,9 @@ def run_tray_app(show_window_on_start: bool = False) -> int:
   def refresh_tooltip() -> None:
     try:
       label = snapshot_label(client.snapshot())
-      tray.setToolTip(f"ThirdFlare One - {label}")
+      tray.setToolTip(tray_tooltip(label))
     except Exception:
-      tray.setToolTip(f"ThirdFlare One - {status_text(launcher)}")
+      tray.setToolTip(tray_tooltip(status_text(launcher)))
     refresh_connection_action()
 
   def refresh_tray_state() -> None:

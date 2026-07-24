@@ -147,3 +147,9 @@ test("OpenAPI /api/action connect response shape", async () => {
   assert.equal(res.status, 200);
   assertRequired(res.json, schemaRequired("/api/action", "post"), "action");
 });
+
+test("OpenAPI /api/logs response shape", async () => {
+  const res = await httpJson("GET", "/api/logs");
+  assert.equal(res.status, 200);
+  assertRequired(res.json, schemaRequired("/api/logs"), "logs");
+});

@@ -63,6 +63,7 @@ Run `npm run check` and `npm run test:all` before handoff. See **[docs/CI.md](do
 - Prefer a single state-revealing toggle for connect/disconnect-style actions over separate On/Off buttons.
 - Align tooltips and account UX with Cloudflare One documentation; avoid placeholder account UI.
 - UI polling/refreshes must preserve scroll position (do not jump the page to the top).
+- User-facing copy must use plain language; never paste prompt/planning text or “Cloudflare does not support…” lectures into the UI. Prefer ThirdFlare workarounds (e.g. app routing shortcuts) over explaining platform gaps.
 
 ## Learned Workspace Facts
 
@@ -70,4 +71,5 @@ Run `npm run check` and `npm run test:all` before handoff. See **[docs/CI.md](do
 - Optional Web UI is off by default; settings are layered (systemd/system defaults with provisional session and in-app overrides).
 - Packaging/CI targets include AppImage, deb, rpm, Flatpak, Snap, GHCR Docker images, and Homebrew. Required CI is Plane M (mock) on Linux/macOS/Windows; Plane R real WARP smoke is Ubuntu-only and optional — see `docs/CI.md`.
 - Native nftables kill-switch lives under `lib/killswitch/` and is exposed via `/api/killswitch`.
+- KDE Plasma / NetworkManager integration: prebuilt WARP profiles (MASQUE, WireGuard, local proxy), dispatcher hooks, and optional KDE proxy sync — see `docs/NETWORKING.md` and `scripts/thirdflare-nm`.
 - Outstanding native gaps often tracked: self-contained native shell (Tauri/Electron or bundled Qt in AppImage), and Windows visual parity. Tray packaging and polkit kill-switch helper ship in deb/rpm/AppImage payloads as of 0.2.x.

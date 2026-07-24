@@ -6,6 +6,7 @@ import {
   deriveLocalNetworkAccess,
   deriveMasqueOption,
   enrichSettings,
+  normalizeOperatingMode,
   parseSettings
 } from "../lib/warp/settings.mjs";
 
@@ -64,4 +65,24 @@ test("enrichSettings maps trusted network flags", () => {
   });
   assert.equal(enriched["Wi-Fi WARP"], "disable");
   assert.equal(enriched["Ethernet WARP"], "keep");
+});
+
+test("normalizeOperatingMode maps warp-cli display strings to UI slugs", () => {
+  assert.equal(normalizeOperatingMode("WarpWithDnsOverHttps"), "warp");
+  assert.equal(normalizeOperatingMode("Warp"), "warp");
+  assert.equal(normalizeOperatingMode("DnsOverHttps"), "doh");
+  assert.equal(normalizeOperatingMode("WarpWithDnsOverTls"), "warp+dot");
+  assert.equal(normalizeOperatingMode("DnsOverTls"), "dot");
+  assert.equal(normalizeOperatingMode("Proxy"), "proxy");
+  assert.equal(normalizeOperatingMode("LocalProxy"), "proxy");
+  assert.equal(normalizeOperatingMode("TunnelOnly"), "tunnel_only");
+  assert.equal(normalizeOperatingMode("proxy"), "proxy");
+  assert.equal(normalizeOperatingMode("WARP"), "warp");
+});
+
+test("enrichSettings normalizes Mode for segmented controls", () => {
+  const enriched = enrichSettings(parseSettings("(default)\tMode: WarpWithDnsOverHttps"));
+  assert.equal(enriched.Mode, "warp");
+  const proxy = enrichSettings(parseSettings("(default)\tMode: Proxy"));
+  assert.equal(proxy.Mode, "proxy");
 });

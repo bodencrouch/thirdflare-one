@@ -28,6 +28,13 @@ import { isSafeGithubRef } from "./lib/update/detect-format.mjs";
 import { parseStatus } from "./lib/warp/status.mjs";
 import { enrichSettings, parseSettings } from "./lib/warp/settings.mjs";
 import { enrichSplitTunnel } from "./lib/warp/split-tunnel.mjs";
+import { createProxyLauncher, listDesktopApps } from "./lib/apps/proxy-launcher.mjs";
+import {
+  deactivateThirdflareNmProfiles,
+  slugForWarpSettings,
+  syncKdeProxy,
+  syncNmForWarpState
+} from "./lib/networkmanager/sync.mjs";
 import {
   accessPortalUrl,
   isConsumerAccount,
@@ -45,6 +52,11 @@ import {
   ENROLLMENT_PAUSE_ACTIONS
 } from "./lib/killswitch/index.mjs";
 import { startStatusWatcher } from "./lib/notify/status-watcher.mjs";
+import {
+  appendFromRunWarp,
+  getCommandLogCapacity,
+  listEntries
+} from "./lib/warp/command-log.mjs";
 
 const root = fileURLToPath(new URL(".", import.meta.url));
 const publicRoot = join(root, "public");
@@ -60,6 +72,30 @@ const MIME = {
   ".json": "application/json; charset=utf-8",
   ".svg": "image/svg+xml"
 };
+
+/** Keep NetworkManager / KDE Plasma proxy state aligned with warp-cli (Linux only). */
+async function afterWarpNetworkSync(action) {
+  if (process.platform !== "linux" || !action) return;
+  try {
+    const snap = await snapshot();
+    if (action === "disconnect") {
+      deactivateThirdflareNmProfiles();
+      syncKdeProxy({ enabled: false, appRoot: root });
+      return;
+    }
+    const syncActions = new Set(["connect", "setMode", "setProtocol", "setMasqueOptions", "enableLocalProxy"]);
+    if (!syncActions.has(action)) return;
+    syncNmForWarpState(snap);
+    const settings = snap.settings || {};
+    const slug = slugForWarpSettings({
+      mode: settings.Mode,
+      protocol: settings["Preferred protocol"] ?? settings.Protocol ?? settings.protocol
+    });
+    syncKdeProxy({ enabled: slug === "proxy", port: 40000, appRoot: root });
+  } catch {
+    /* optional integration */
+  }
+}
 
 const COMMANDS = {
   status: ["status"],
@@ -161,24 +197,28 @@ function runWarp(args, options = {}) {
       stderr += chunk.toString();
     });
     child.on("error", (error) => {
-      resolve({
+      const result = {
         ok: false,
         command: `warp-cli ${finalArgs.join(" ")}`,
         code: null,
         stdout: "",
         stderr: error.message,
         durationMs: Date.now() - startedAt
-      });
+      };
+      appendFromRunWarp(redactCommand(result), { source: options.source || "warp" });
+      resolve(result);
     });
     child.on("close", (code) => {
-      resolve({
+      const result = {
         ok: code === 0,
         command: `warp-cli ${finalArgs.join(" ")}`,
         code,
         stdout: stdout.trim(),
         stderr: stderr.trim(),
         durationMs: Date.now() - startedAt
-      });
+      };
+      appendFromRunWarp(redactCommand(result), { source: options.source || "warp" });
+      resolve(result);
     });
   });
 }
@@ -637,6 +677,36 @@ async function handleApi(req, res, url) {
       return;
     }
 
+    if (req.method === "GET" && url.pathname === "/api/logs") {
+      const sinceRaw = url.searchParams.get("since");
+      const since = sinceRaw != null && sinceRaw !== "" ? Number(sinceRaw) : null;
+      json(res, 200, {
+        ok: true,
+        entries: listEntries({ since: Number.isFinite(since) ? since : null }),
+        capacity: getCommandLogCapacity()
+      });
+      return;
+    }
+
+    if (req.method === "GET" && url.pathname === "/api/apps") {
+      const apps = await listDesktopApps();
+      json(res, 200, { ok: true, apps });
+      return;
+    }
+
+    if (req.method === "POST" && url.pathname === "/api/apps/proxy-launcher") {
+      const body = await readJson(req);
+      const appId = String(body?.appId || body?.id || "").trim();
+      if (!appId) {
+        json(res, 400, { ok: false, error: "Body must include appId." });
+        return;
+      }
+      const port = body?.port != null ? Number(body.port) : 40000;
+      const result = await createProxyLauncher({ appId, port });
+      json(res, result.ok ? 200 : 404, result);
+      return;
+    }
+
     if (req.method === "GET" && url.pathname === "/api/snapshot") {
       json(res, 200, await snapshot());
       return;
@@ -719,6 +789,36 @@ async function handleApi(req, res, url) {
 
     if (req.method === "POST" && url.pathname === "/api/action") {
       const body = await readJson(req);
+      if (body?.action === "enableLocalProxy") {
+        const steps = [];
+        const protocolResult = await runWarp(["tunnel", "protocol", "set", "MASQUE"], { timeout: 30000 });
+        steps.push({
+          action: "setProtocol",
+          result: redactCommand(protocolResult)
+        });
+        if (!protocolResult.ok) {
+          json(res, 502, {
+            ok: false,
+            error: protocolResult.stderr || protocolResult.stdout || "Could not set tunnel protocol to MASQUE.",
+            result: redactCommand(protocolResult),
+            steps
+          });
+          return;
+        }
+        const modeResult = await runWarp(["mode", "proxy"], { timeout: 30000 });
+        steps.push({
+          action: "setMode",
+          result: redactCommand(modeResult)
+        });
+        json(res, modeResult.ok ? 200 : 502, {
+          ok: modeResult.ok,
+          error: modeResult.ok ? undefined : (modeResult.stderr || modeResult.stdout || "Could not enable proxy mode."),
+          result: redactCommand(modeResult),
+          steps
+        });
+        void afterWarpNetworkSync("enableLocalProxy");
+        return;
+      }
       const args = actionArgs(body);
       if (!args) {
         json(res, 400, { ok: false, error: "Unsupported or invalid action." });
@@ -749,6 +849,7 @@ async function handleApi(req, res, url) {
         killSwitchPause: pauseMeta,
         killSwitchResume: resumeMeta
       });
+      void afterWarpNetworkSync(body?.action);
       return;
     }
 

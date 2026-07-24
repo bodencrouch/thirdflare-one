@@ -1,9 +1,12 @@
-const CACHE_NAME = "thirdflare-one-shell-v1";
+const CACHE_NAME = "thirdflare-one-shell-v2";
 const SHELL_ASSETS = [
   "/",
   "/index.html",
   "/styles.css",
   "/app.js",
+  "/log-widget.js",
+  "/i18n.js",
+  "/locales/en.json",
   "/manifest.webmanifest",
   "/icon.svg"
 ];

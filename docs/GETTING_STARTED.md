@@ -97,6 +97,37 @@ Remove everything including the install tree:
 
 > **Tip:** Re-run `./thirdflare-one install` after moving or deleting a git checkout to refresh desktop entries and CLI links.
 
+### After pulling UI changes (local install + tray)
+
+The KDE Plasma tray loads the Web UI from **`~/.local/share/thirdflare-one`**, not your git checkout. After UI work, purge-reinstall and verify the daemon serves the new assets:
+
+```bash
+thirdflare-one-tray --stop 2>/dev/null || true
+./scripts/uninstall-local.sh --purge
+./scripts/install-local.sh
+./scripts/verify-local-install.sh
+```
+
+**Reset embedded WebEngine / UI prefs** when the tray still shows an old shell (missing log dock, stale controls):
+
+1. Quit the tray (`thirdflare-one-tray --stop`).
+2. Optional Qt WebEngine cache clear: `rm -rf ~/.cache/QtWebEngine/Default/Cache*`
+3. Reopen the tray and use **Reload window** from the tray menu, or hard-reload once in the panel.
+4. To reset in-app layout prefs, clear these `localStorage` keys in the embedded panel (DevTools → Application): `thirdflare-ui-expert`, `thirdflare-log-collapsed`, `thirdflare-log-tab`, `thirdflare-log-height`.
+
+Expert mode (Settings → Expert UI) shows the log dock at the bottom with **Status**, **Console**, and **Diagnostics** tabs.
+
+### KDE / NetworkManager (WARP in system network UI)
+
+ThirdFlare installs three NetworkManager profiles — **MASQUE**, **WireGuard**, and **Local proxy** — so you can connect from KDE System Settings → Network or import them via **Import VPN connection**. Run once after install:
+
+```bash
+./scripts/thirdflare-nm --user
+./scripts/thirdflare-nm --system   # dispatcher + sysctl (pkexec; recommended)
+```
+
+See **[NETWORKING.md](NETWORKING.md)** for Plasma widget usage, protocol choice, and limitations.
+
 ### 3. Run directly from a checkout (development)
 
 No install step — good for hacking on the code:
