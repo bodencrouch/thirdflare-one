@@ -76,7 +76,8 @@ const state = {
     guidedCommands: null,
     script: null,
     loading: false
-  }
+  },
+  pendingScrollId: null
 };
 
 const EXPERT_UI_STORAGE_KEY = "thirdflare-ui-expert";
@@ -108,6 +109,42 @@ function setExpertMode(enabled) {
     state.view = "connectivity";
   }
   render();
+}
+
+function openRoutingExpert(view = "split", scrollId = null) {
+  localStorage.setItem(EXPERT_UI_STORAGE_KEY, "1");
+  state.view = view;
+  state.pendingScrollId = scrollId;
+  render();
+}
+
+function splitTunnelState() {
+  return state.snapshot?.splitTunnel || { mode: "unknown", ips: [], hosts: [], managedByDashboard: false, managedHint: null };
+}
+
+function splitModeLabel(mode) {
+  if (mode === "exclude") return t("splitGuide.modeExclude");
+  if (mode === "include") return t("splitGuide.modeInclude");
+  return t("splitGuide.modeUnknown");
+}
+
+function proxyPortValue() {
+  const fromForm = String(state.forms.proxyPort || "").trim();
+  if (fromForm) return fromForm;
+  const fromSettings = setting("Proxy port", "proxy port");
+  if (fromSettings && fromSettings !== "Unknown") return fromSettings;
+  return "40000";
+}
+
+async function copyText(label, text) {
+  try {
+    await navigator.clipboard.writeText(text);
+    state.toast = label;
+    render();
+  } catch {
+    state.error = t("account.copyFailed");
+    render();
+  }
 }
 
 function commandText(key) {
@@ -500,6 +537,16 @@ function simpleConnectivityView() {
   keysRow.append(resetBtn);
   keysCard.append(keysRow);
   view.append(keysCard);
+
+  const routingCard = el("section", "cf-card simple-routing-card");
+  routingCard.innerHTML = `<div class="cf-card-title">${t("simple.routingTitle")}</div><p class="simple-routing-copy">${t("simple.routingSummary")}</p>`;
+  const routingBtn = el("button", "secondary", t("simple.configureRouting"));
+  routingBtn.type = "button";
+  routingBtn.disabled = state.busy;
+  routingBtn.onclick = () => openRoutingExpert("split");
+  routingCard.append(routingBtn);
+  view.append(routingCard);
+
   return view;
 }
 
@@ -1121,9 +1168,200 @@ function gatewayView() {
   return view;
 }
 
+function splitRoutingStatusBanner() {
+  const st = splitTunnelState();
+  const connected = Boolean(state.snapshot?.status?.connected);
+  const badge = connectionBadge();
+  const panel = el("section", "panel routing-status-banner");
+  panel.innerHTML = `
+    <div class="panel-heading">
+      <h3${tipMarkup("splitTunnel")}>${t("splitGuide.statusTitle")}</h3>
+      <span class="status-badge ${badge.kind}">${escapeHtml(badge.text)}</span>
+    </div>
+    <div class="routing-status-grid">
+      <div class="routing-status-item">
+        <span class="routing-status-label">${t("simple.connectionStatus")}</span>
+        <strong>${escapeHtml(statusText())}</strong>
+      </div>
+      <div class="routing-status-item">
+        <span class="routing-status-label routing-mode-label${tipMarkup("splitTunnel")}">${t("splitGuide.statusTitle")}</span>
+        <span class="routing-mode-badge mode-${escapeHtml(st.mode)}">${escapeHtml(splitModeLabel(st.mode))}</span>
+      </div>
+      <div class="routing-status-item">
+        <span class="routing-status-label">${t("splitGuide.routeCounts", { ipCount: st.ips.length, hostCount: st.hosts.length })}</span>
+      </div>
+    </div>
+    ${!connected ? `<p class="routing-hint">${t("splitGuide.connectFirst")}</p>` : ""}
+    <p class="routing-hint">${t("splitGuide.modeReadOnlyHint")}</p>
+    ${st.managedHint ? `<p class="routing-hint managed">${escapeHtml(st.managedHint)}</p>` : ""}
+  `;
+  return panel;
+}
+
+function routingScenarioCard({ id, title, summary, steps, note, active }) {
+  const card = el("section", `panel routing-scenario${active ? " is-active" : ""}`);
+  card.id = id;
+  card.innerHTML = `
+    <div class="routing-scenario-head">
+      <h3>${escapeHtml(title)}</h3>
+      <p>${escapeHtml(summary)}</p>
+    </div>
+    <ol class="routing-steps">
+      ${steps.map((step) => `<li>${escapeHtml(step)}</li>`).join("")}
+    </ol>
+    ${note ? `<p class="routing-note">${escapeHtml(note)}</p>` : ""}
+  `;
+  return card;
+}
+
+function routeListPanel(title, items, removeAction, tipKey) {
+  const panel = el("section", "panel route-list-panel");
+  panel.innerHTML = `<div class="panel-heading"><h3${tipMarkup(tipKey)}>${escapeHtml(title)}</h3><span>${items.length}</span></div>`;
+  if (!items.length) {
+    panel.append(el("p", "routing-empty", t("splitGuide.noRoutes")));
+    return panel;
+  }
+  const list = el("div", "route-list");
+  items.forEach((value) => {
+    const row = el("div", "route-row");
+    row.innerHTML = `<code>${escapeHtml(value)}</code>`;
+    const btn = el("button", "secondary danger", t("splitGuide.removeRoute"));
+    btn.type = "button";
+    btn.disabled = state.busy;
+    btn.onclick = () => action(removeAction, value);
+    row.append(btn);
+    list.append(row);
+  });
+  panel.append(list);
+  return panel;
+}
+
+function collapsedOutputPanel(title, result, tipKey) {
+  const details = el("details", "panel output-panel-collapsed");
+  const ok = result?.ok;
+  const output = result ? (result.stdout || result.stderr || "No output.") : "No command has run yet.";
+  details.innerHTML = `
+    <summary${tipMarkup(tipKey)}>${escapeHtml(title)} <span class="${ok ? "ok" : "fail"}">${result ? (ok ? "ok" : `exit ${result.code ?? "error"}`) : "waiting"}</span></summary>
+    <pre>${escapeHtml(output)}</pre>
+  `;
+  return details;
+}
+
+function splitRoutingGuidePanel() {
+  const st = splitTunnelState();
+  const port = proxyPortValue();
+  const panel = el("div", "routing-scenarios");
+
+  panel.append(routingScenarioCard({
+    id: "routing-scenario-exclude",
+    title: t("splitGuide.scenario1Title"),
+    summary: t("splitGuide.scenario1Summary"),
+    steps: [
+      t("splitGuide.scenario1Step1"),
+      t("splitGuide.scenario1Step2"),
+      t("splitGuide.scenario1Step3")
+    ],
+    note: t("splitGuide.scenario1AppNote"),
+    active: st.mode === "exclude"
+  }));
+
+  panel.append(routingScenarioCard({
+    id: "routing-scenario-include",
+    title: t("splitGuide.scenario2Title"),
+    summary: t("splitGuide.scenario2Summary"),
+    steps: [
+      t("splitGuide.scenario2Step1"),
+      t("splitGuide.scenario2Step2"),
+      t("splitGuide.scenario2Step3")
+    ],
+    active: st.mode === "include"
+  }));
+
+  const tunnelBtn = el("button", "secondary", t("splitGuide.openTunnel"));
+  tunnelBtn.type = "button";
+  tunnelBtn.onclick = () => openRoutingExpert("tunnel", "tunnel-proxy-guide");
+
+  const scenario3 = routingScenarioCard({
+    id: "routing-scenario-proxy",
+    title: t("splitGuide.scenario3Title"),
+    summary: t("splitGuide.scenario3Summary"),
+    steps: [
+      t("splitGuide.scenario3Step1"),
+      t("splitGuide.scenario3Step2"),
+      t("splitGuide.scenario3Step3")
+    ],
+    note: t("splitGuide.scenario3Example", { port }),
+    active: false
+  });
+  const actions = el("div", "routing-scenario-actions");
+  actions.append(tunnelBtn);
+  scenario3.append(actions);
+  panel.append(scenario3);
+
+  const wrap = el("section", "panel guide-panel routing-guide-panel");
+  wrap.innerHTML = `
+    <div class="panel-heading">
+      <h3${tipMarkup("pageSplit")}>${t("splitGuide.title")}</h3>
+      <span>guide</span>
+    </div>
+    <p class="guide-lede">${t("splitGuide.perAppBody")}</p>
+    <p class="guide-lede">${t("splitGuide.konsoleNote")}</p>
+    <p class="guide-link"><a href="https://developers.cloudflare.com/cloudflare-one/team-and-resources/devices/cloudflare-one-client/configure/route-traffic/split-tunnels/" target="_blank" rel="noopener noreferrer">${t("splitGuide.docsLink")}</a></p>
+  `;
+  wrap.append(panel);
+  return wrap;
+}
+
+function tunnelProxyGuidePanel() {
+  const mode = setting("Mode").toLowerCase();
+  const isProxy = mode === "proxy";
+  const port = proxyPortValue();
+  const proxyUrl = `127.0.0.1:${port}`;
+  const panel = el("section", "panel guide-panel tunnel-proxy-panel");
+  panel.id = "tunnel-proxy-guide";
+
+  if (isProxy) {
+    panel.innerHTML = `
+      <div class="panel-heading">
+        <h3${tipMarkup("modeProxy")}>${t("tunnelGuide.proxyActiveTitle")}</h3>
+        <span class="routing-mode-badge mode-proxy">${t("tunnelGuide.proxyModeLabel")}</span>
+      </div>
+      <p>${t("tunnelGuide.proxyActiveSummary")}</p>
+      <div class="proxy-listen-row">
+        <code class="proxy-listen">${escapeHtml(proxyUrl)}</code>
+        <button type="button" class="secondary" data-copy-proxy>${t("tunnelGuide.proxyCopy")}</button>
+      </div>
+      <p class="routing-hint">${t("tunnelGuide.proxyMasqueNote")}</p>
+      <ol class="routing-steps">
+        <li>${t("tunnelGuide.proxyStep1")}</li>
+        <li>${t("tunnelGuide.proxyStep2")}</li>
+        <li>${t("tunnelGuide.proxyStep3")}</li>
+      </ol>
+      <p class="routing-note">${t("splitGuide.scenario3Example", { port })}</p>
+    `;
+    panel.querySelector("[data-copy-proxy]").onclick = () => copyText(t("tunnelGuide.proxyCopied"), proxyUrl);
+    return panel;
+  }
+
+  panel.innerHTML = `
+    <div class="panel-heading">
+      <h3${tipMarkup("modeProxy")}>${t("tunnelGuide.proxyTeaserTitle")}</h3>
+      <span>guide</span>
+    </div>
+    <p>${t("tunnelGuide.proxyTeaserSummary")}</p>
+    <button type="button" class="secondary" data-enable-proxy>${t("tunnelGuide.enableProxyMode")}</button>
+  `;
+  panel.querySelector("[data-enable-proxy]").onclick = () => {
+    if (!window.confirm(t("tunnelGuide.enableProxyConfirm"))) return;
+    action("setMode", "proxy");
+  };
+  return panel;
+}
+
 function tunnelView() {
   const view = el("div", "view-stack");
   view.append(pageTitle("Tunnel", "Switch WARP modes, tunnel protocols, proxy port, and virtual network.", "pageTunnel"));
+  view.append(tunnelProxyGuidePanel());
   view.append(segmented("Operating mode", quickModes, "setMode", setting("Mode"), tip("mode"), modeValueTips));
   view.append(segmented("Preferred protocol", protocols, "setProtocol", setting("Tunnel protocol", "Protocol"), tip("protocol"), protocolValueTips));
   view.append(segmented("MASQUE options", masqueOptions, "setMasqueOptions", setting("MASQUE options"), tip("masque")));
@@ -1141,48 +1379,32 @@ function tunnelView() {
   return view;
 }
 
-function splitTunnelGuidePanel() {
-  const panel = el("section", "panel guide-panel");
-  panel.innerHTML = `
-    <div class="panel-heading">
-      <h3${tipMarkup("splitTunnel")}>${t("splitGuide.title")}</h3>
-      <span>guide</span>
-    </div>
-    <div class="guide-section">
-      <strong>${t("splitGuide.modesTitle")}</strong>
-      <p>${t("splitGuide.modesBody")}</p>
-    </div>
-    <div class="guide-section">
-      <strong>${t("splitGuide.uiTitle")}</strong>
-      <p>${t("splitGuide.uiBody")}</p>
-    </div>
-    <div class="guide-section">
-      <strong>${t("splitGuide.perAppTitle")}</strong>
-      <p>${t("splitGuide.perAppBody")}</p>
-      <p>${t("splitGuide.perAppProxy")}</p>
-      <p>${t("splitGuide.perAppExclude")}</p>
-      <p>${t("splitGuide.konsoleNote")}</p>
-    </div>
-    <p class="guide-link"><a href="https://developers.cloudflare.com/cloudflare-one/team-and-resources/devices/cloudflare-one-client/configure/route-traffic/split-tunnels/" target="_blank" rel="noopener noreferrer">${t("splitGuide.docsLink")}</a></p>
-  `;
-  return panel;
-}
-
 function splitView() {
+  const st = splitTunnelState();
+  const excludeMode = st.mode !== "include";
+  const ipLabel = excludeMode ? t("splitGuide.addIpExclude") : t("splitGuide.addIpInclude");
+  const hostLabel = excludeMode ? t("splitGuide.addHostExclude") : t("splitGuide.addHostInclude");
+
   const view = el("div", "view-stack");
-  view.append(pageTitle("Split Tunnel", t("splitGuide.modesBody"), "pageSplit"));
-  view.append(splitTunnelGuidePanel());
+  view.append(pageTitle("Split Tunnel", t("splitGuide.pageLede"), "pageSplit"));
+  view.append(splitRoutingStatusBanner());
+  view.append(splitRoutingGuidePanel());
   view.append(formPanel("Routes", [
-    ["IP or CIDR", "splitIp", "Add IP", () => action("addSplitIp", state.forms.splitIp), "splitIp"],
-    ["Host name", "splitHost", "Add host", () => action("addSplitHost", state.forms.splitHost), "splitHost"]
+    [ipLabel, "splitIp", "Add IP", () => action("addSplitIp", state.forms.splitIp), "splitIp"],
+    [hostLabel, "splitHost", "Add host", () => action("addSplitHost", state.forms.splitHost), "splitHost"]
   ]));
+  view.append(routeListPanel(t("splitGuide.ipRoutesTitle"), st.ips, "removeSplitIp", "splitIp"));
+  view.append(routeListPanel(t("splitGuide.hostRoutesTitle"), st.hosts, "removeSplitHost", "splitHost"));
   view.append(actionPanel("Reset", [
     ["Reset IP routes", "resetSplitIps", "resetSplitIps"],
     ["Reset host routes", "resetSplitHosts", "resetSplitHosts"]
   ]));
-  view.append(outputPanel("Routing dump", state.snapshot?.commands?.splitTunnelDump, "splitTunnel"));
-  view.append(outputPanel("IP routes", state.snapshot?.commands?.splitTunnelIps, "splitIp"));
-  view.append(outputPanel("Host routes", state.snapshot?.commands?.splitTunnelHosts, "splitHost"));
+  const advanced = el("section", "panel routing-advanced");
+  advanced.innerHTML = `<div class="panel-heading"><h3>${t("splitGuide.advancedOutput")}</h3><span>warp-cli</span></div>`;
+  advanced.append(collapsedOutputPanel("Routing dump", state.snapshot?.commands?.splitTunnelDump, "splitTunnel"));
+  advanced.append(collapsedOutputPanel("IP routes (raw)", state.snapshot?.commands?.splitTunnelIps, "splitIp"));
+  advanced.append(collapsedOutputPanel("Host routes (raw)", state.snapshot?.commands?.splitTunnelHosts, "splitHost"));
+  view.append(advanced);
   return view;
 }
 
@@ -1976,6 +2198,13 @@ function render() {
   }
   render.lastView = state.view;
   restoreScroll(scroll);
+  if (state.pendingScrollId) {
+    const targetId = state.pendingScrollId;
+    state.pendingScrollId = null;
+    requestAnimationFrame(() => {
+      document.getElementById(targetId)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }
 }
 render.lastView = null;
 

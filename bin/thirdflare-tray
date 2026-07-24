@@ -33,7 +33,7 @@ Usage:
 Also available as: thirdflare-one --tray
 
 On KDE Plasma / Wayland the tray uses PyQt6 with the full Web UI embedded (left-click).
-The browser is not used unless you launch thirdflare-one directly.
+Use thirdflare-one --no-open for API-only daemon mode without the native shell.
 USAGE
 }
 
@@ -207,8 +207,8 @@ notify_status() {
 ensure_daemon() {
   if ! "$LAUNCHER" --status >/dev/null 2>&1; then
     echo "Starting ThirdFlare One daemon for tray actions..." >&2
-    "$LAUNCHER" --no-open >/dev/null
   fi
+  "$LAUNCHER" --no-open >/dev/null
 }
 
 tray_process_running() {

@@ -161,6 +161,7 @@ test("/api/health returns app identity", async () => {
   assert.equal(res.json.ok, true);
   assert.equal(res.json.app, "thirdflare");
   assert.ok(res.json.version, "health should include semver");
+  assert.equal(typeof res.json.apiRevision, "number");
 });
 
 test("/api/version returns channel and source", async () => {
@@ -179,6 +180,10 @@ test("/api/snapshot reports warp daemon and network debug", async () => {
   assert.equal(res.json.status.disconnected, true);
   assert.match(res.json.commands.network.stdout, /DNS servers:/);
   assert.match(res.json.commands.network.stdout, /1\.1\.1\.1/);
+  assert.equal(typeof res.json.splitTunnel, "object");
+  assert.equal(res.json.splitTunnel.mode, "exclude");
+  assert.ok(Array.isArray(res.json.splitTunnel.ips));
+  assert.ok(Array.isArray(res.json.splitTunnel.hosts));
 });
 
 test("connect then disconnect updates snapshot status", async () => {
@@ -260,11 +265,15 @@ test("split tunnel ip/host add remove reset", async () => {
   let snap = await httpJson("GET", "/api/snapshot");
   assert.match(snap.json.commands.splitTunnelIps.stdout, /172\.16\.0\.0\/12/);
   assert.match(snap.json.commands.splitTunnelHosts.stdout, /intranet\.example/);
+  assert.ok(snap.json.splitTunnel.ips.includes("172.16.0.0/12"));
+  assert.ok(snap.json.splitTunnel.hosts.includes("intranet.example"));
   assert.equal((await action("removeSplitIp", "172.16.0.0/12")).status, 200);
   assert.equal((await action("removeSplitHost", "intranet.example")).status, 200);
   snap = await httpJson("GET", "/api/snapshot");
   assert.doesNotMatch(snap.json.commands.splitTunnelIps.stdout, /172\.16\.0\.0\/12/);
   assert.doesNotMatch(snap.json.commands.splitTunnelHosts.stdout, /intranet\.example/);
+  assert.ok(!snap.json.splitTunnel.ips.includes("172.16.0.0/12"));
+  assert.ok(!snap.json.splitTunnel.hosts.includes("intranet.example"));
   await action("resetSplitIps");
   await action("resetSplitHosts");
 });

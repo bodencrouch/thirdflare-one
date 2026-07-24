@@ -57,11 +57,9 @@ modules:
         install -Dm644 packaging/thirdflare-one.desktop \
           /app/share/applications/io.github.bodencrouch.ThirdFlareOne.desktop
         sed -i \
-          -e 's|^Exec=.*|Exec=thirdflare-one|' \
+          -e 's|^Exec=.*|Exec=thirdflare-one-tray|' \
           -e 's|^Icon=.*|Icon=io.github.bodencrouch.ThirdFlareOne|' \
           /app/share/applications/io.github.bodencrouch.ThirdFlareOne.desktop
-        sed -i '/^\[Desktop Action/,/^$/ s|^Icon=.*|Icon=io.github.bodencrouch.ThirdFlareOne|' \
-          /app/share/applications/io.github.bodencrouch.ThirdFlareOne.desktop || true
         install -Dm644 assets/thirdflare.svg \
           /app/share/icons/hicolor/scalable/apps/io.github.bodencrouch.ThirdFlareOne.svg
         install -Dm644 packaging/flatpak/metainfo.xml \

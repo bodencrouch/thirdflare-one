@@ -94,6 +94,10 @@ echo "Installing ThirdFlare One $(thirdflare_version) to ${INSTALL_DIR}"
 mkdir -p "$INSTALL_DIR"
 rsync -a --delete "${RSYNC_EXCLUDES[@]}" "${ROOT}/" "${INSTALL_DIR}/"
 
+if [[ -x "${INSTALL_DIR}/bin/thirdflare" ]]; then
+  "${INSTALL_DIR}/bin/thirdflare" --stop >/dev/null 2>&1 || true
+fi
+
 ICON_THEME_ROOT="${XDG_DATA_HOME:-$HOME/.local/share}/icons/hicolor"
 mkdir -p "${ICON_THEME_ROOT}/scalable/apps"
 install -m 0644 "${INSTALL_DIR}/assets/thirdflare.svg" "${ICON_THEME_ROOT}/scalable/apps/thirdflare-one.svg"
@@ -129,33 +133,12 @@ if [[ "$WITH_DESKTOP" -eq 1 ]]; then
 Type=Application
 Name=ThirdFlare One
 Comment=Unofficial cross-platform Cloudflare One client
-Exec=${INSTALL_DIR}/bin/thirdflare
+Exec=${INSTALL_DIR}/bin/thirdflare-tray
 Icon=${INSTALL_DIR}/assets/thirdflare.svg
 Terminal=false
 Categories=Network;
 Keywords=Cloudflare;WARP;Zero Trust;ThirdFlare One;VPN;DNS;
 StartupNotify=true
-Actions=WarpConnection;Status;Tray;Panel;
-
-[Desktop Action WarpConnection]
-Name=Connect or Disconnect WARP
-Exec=${INSTALL_DIR}/bin/thirdflare --warp-action
-Icon=${INSTALL_DIR}/assets/thirdflare.svg
-
-[Desktop Action Status]
-Name=Show WARP Status
-Exec=${INSTALL_DIR}/bin/thirdflare --warp-status
-Icon=${INSTALL_DIR}/assets/thirdflare.svg
-
-[Desktop Action Tray]
-Name=Start Tray and Control Panel
-Exec=${INSTALL_DIR}/bin/thirdflare --tray
-Icon=${INSTALL_DIR}/assets/thirdflare.svg
-
-[Desktop Action Panel]
-Name=Open ThirdFlare One
-Exec=${INSTALL_DIR}/bin/thirdflare --panel
-Icon=${INSTALL_DIR}/assets/thirdflare.svg
 DESKTOP
   chmod 0644 "$DESKTOP_FILE"
 

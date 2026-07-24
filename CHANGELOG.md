@@ -15,6 +15,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Opt-in tray autostart (`tray.autostart` config + `POST /api/config/tray-autostart`)
 - Always On (Linux) UX: kill switch labeled as Windows Always On equivalent in UI and docs
 - Split tunnel in-app guide (IP/domain routing vs per-app limitations)
+- Scenario-driven routing UX: Split Tunnel status banner, three setup cards (Exclude / Include / Local proxy), removable route lists, Tunnel proxy guide, and simple Connectivity entry point
+- Structured `splitTunnel` snapshot from `lib/warp/split-tunnel.mjs` for live mode and route counts
+
+### Bug Fixes
+
+- KDE launcher: single app menu entry launches native PyQt6 tray (not Firefox); removed Desktop Actions that Plasma indexed as duplicates
+- Stale daemon detection: restart API server after install or when `apiRevision`/version mismatch (fixes “Unknown API route” on Settings toggles)
 
 ## [0.2.7](https://github.com/bodencrouch/thirdflare-one/compare/v0.2.6...v0.2.7) (2026-07-18)
 

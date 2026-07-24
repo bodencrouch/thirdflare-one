@@ -20,12 +20,14 @@ import {
 } from "./lib/config.mjs";
 import { syncTrayAutostart } from "./lib/tray/autostart.mjs";
 import { getVersion, getVersionInfo } from "./lib/version.mjs";
+import { API_REVISION } from "./lib/api-revision.mjs";
 import { applyUpdate, checkForUpdate, prepareApply } from "./lib/update/index.mjs";
 import { listForks, listReleases } from "./lib/update/github.mjs";
 import { detectInstallFormat } from "./lib/update/detect-format.mjs";
 import { isSafeGithubRef } from "./lib/update/detect-format.mjs";
 import { parseStatus } from "./lib/warp/status.mjs";
 import { enrichSettings, parseSettings } from "./lib/warp/settings.mjs";
+import { enrichSplitTunnel } from "./lib/warp/split-tunnel.mjs";
 import {
   accessPortalUrl,
   isConsumerAccount,
@@ -282,6 +284,11 @@ async function snapshot() {
     daemon,
     status,
     settings,
+    splitTunnel: enrichSplitTunnel({
+      dump: commands.splitTunnelDump,
+      ips: commands.splitTunnelIps,
+      hosts: commands.splitTunnelHosts
+    }),
     parsed: {
       tunnel: parseTunnelStats(commands.tunnelStats.stdout),
       dns: parseDnsStats(commands.dnsStats.stdout)
@@ -429,6 +436,7 @@ async function handleApi(req, res, url) {
         app: APP_ID,
         name: APP_DISPLAY_NAME,
         version: getVersion(),
+        apiRevision: API_REVISION,
         generatedAt: new Date().toISOString()
       });
       return;
