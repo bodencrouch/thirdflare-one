@@ -24,7 +24,7 @@ test("buildTrayAutostartDesktop is a valid hidden autostart entry", () => {
   assert.match(desktop, /^NoDisplay=true/m);
 });
 
-test("syncTrayAutostart writes and removes the desktop file", () => {
+test("syncTrayAutostart writes and removes the desktop file", { skip: process.platform !== "linux" ? "linux-only" : false }, () => {
   const root = mkdtempSync(join(tmpdir(), "tf-tray-auto-"));
   const env = { ...process.env, HOME: root, XDG_CONFIG_HOME: join(root, ".config") };
   const appRoot = join(root, "app");
