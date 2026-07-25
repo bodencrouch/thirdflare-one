@@ -52,6 +52,9 @@ When `ui.notifications` is true (default), `server.js` starts `lib/notify/status
 |-------|--------|---------|
 | `/api/session` | GET | Local session credential for this daemon (same-origin loopback callers only) |
 | `/api/health` | GET | Liveness; returns `app: "thirdflare"` |
+| `/api/readiness` | GET | Shared readiness truth (hard blockers vs soft warnings) for tray, Web UI, and launcher |
+| `/api/diagnostics` | GET | Clipboard-ready diagnostics summary (no account secrets) |
+| `/api/version` | GET | Installed version + update channel/source |
 | `/api/version` | GET | Installed semver, channel, update source |
 | `/api/config` | GET | Effective config + source flags |
 | `/api/config/session` | POST | Provisional in-app overrides |

@@ -5,7 +5,11 @@
     "version": "0.2.8",
     "description": "Control-plane contract for the Node daemon. Validated in Plane M CI against a mock warp-cli.\n\nRequests that change anything (POST/PUT/PATCH/DELETE) must come from this computer, be addressed to a loopback Host, send `Content-Type: application/json`, and carry the local session credential in `X-Thirdflare-Session`. Fetch the credential from `GET /api/session` or read it from `~/.config/thirdflare/session-<port>.token`."
   },
-  "servers": [{ "url": "http://127.0.0.1:4173" }],
+  "servers": [
+    {
+      "url": "http://127.0.0.1:4173"
+    }
+  ],
   "components": {
     "securitySchemes": {
       "localSession": {
@@ -22,10 +26,21 @@
           "application/json": {
             "schema": {
               "type": "object",
-              "required": ["ok", "error", "reason"],
+              "required": [
+                "ok",
+                "error",
+                "reason"
+              ],
               "properties": {
-                "ok": { "type": "boolean", "enum": [false] },
-                "error": { "type": "string" },
+                "ok": {
+                  "type": "boolean",
+                  "enum": [
+                    false
+                  ]
+                },
+                "error": {
+                  "type": "string"
+                },
                 "reason": {
                   "type": "string",
                   "enum": [
@@ -56,17 +71,32 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "required": ["ok", "session", "header"],
+                  "required": [
+                    "ok",
+                    "session",
+                    "header"
+                  ],
                   "properties": {
-                    "ok": { "type": "boolean" },
-                    "session": { "type": "string" },
-                    "header": { "type": "string", "enum": ["x-thirdflare-session"] }
+                    "ok": {
+                      "type": "boolean"
+                    },
+                    "session": {
+                      "type": "string"
+                    },
+                    "header": {
+                      "type": "string",
+                      "enum": [
+                        "x-thirdflare-session"
+                      ]
+                    }
                   }
                 }
               }
             }
           },
-          "403": { "$ref": "#/components/responses/Blocked" }
+          "403": {
+            "$ref": "#/components/responses/Blocked"
+          }
         }
       }
     },
@@ -80,13 +110,125 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "required": ["ok", "app", "version"],
+                  "required": [
+                    "ok",
+                    "app",
+                    "version"
+                  ],
                   "properties": {
-                    "ok": { "type": "boolean" },
-                    "app": { "type": "string", "enum": ["thirdflare"] },
-                    "version": { "type": "string" },
-                    "webuiEnabled": { "type": "boolean" },
-                    "effectivePort": { "type": "integer" }
+                    "ok": {
+                      "type": "boolean"
+                    },
+                    "app": {
+                      "type": "string",
+                      "enum": [
+                        "thirdflare"
+                      ]
+                    },
+                    "version": {
+                      "type": "string"
+                    },
+                    "webuiEnabled": {
+                      "type": "boolean"
+                    },
+                    "effectivePort": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/readiness": {
+      "get": {
+        "summary": "Readiness truth for tray, Web UI, and launcher",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "ok",
+                    "hardBlocked",
+                    "items",
+                    "killSwitchMode"
+                  ],
+                  "properties": {
+                    "ok": {
+                      "type": "boolean"
+                    },
+                    "ready": {
+                      "type": "boolean"
+                    },
+                    "hardBlocked": {
+                      "type": "boolean"
+                    },
+                    "softWarnings": {
+                      "type": "boolean"
+                    },
+                    "needsAttention": {
+                      "type": "boolean"
+                    },
+                    "killSwitchMode": {
+                      "type": "string",
+                      "enum": [
+                        "off",
+                        "always_on",
+                        "paused"
+                      ]
+                    },
+                    "connectBlockedBy": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object"
+                      }
+                    },
+                    "generatedAt": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/diagnostics": {
+      "get": {
+        "summary": "Clipboard-ready diagnostics summary (no account secrets)",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "ok",
+                    "text"
+                  ],
+                  "properties": {
+                    "ok": {
+                      "type": "boolean"
+                    },
+                    "text": {
+                      "type": "string"
+                    },
+                    "readiness": {
+                      "type": "object"
+                    }
                   }
                 }
               }
@@ -105,12 +247,25 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "required": ["ok", "version", "channel", "source"],
+                  "required": [
+                    "ok",
+                    "version",
+                    "channel",
+                    "source"
+                  ],
                   "properties": {
-                    "ok": { "type": "boolean" },
-                    "version": { "type": "string" },
-                    "channel": { "type": "string" },
-                    "source": { "type": "object" }
+                    "ok": {
+                      "type": "boolean"
+                    },
+                    "version": {
+                      "type": "string"
+                    },
+                    "channel": {
+                      "type": "string"
+                    },
+                    "source": {
+                      "type": "object"
+                    }
                   }
                 }
               }
@@ -129,16 +284,30 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "required": ["registered", "consumer", "devices"],
+                  "required": [
+                    "registered",
+                    "consumer",
+                    "devices"
+                  ],
                   "properties": {
-                    "registered": { "type": "boolean" },
-                    "consumer": { "type": "boolean" },
-                    "zeroTrust": { "type": "boolean" },
+                    "registered": {
+                      "type": "boolean"
+                    },
+                    "consumer": {
+                      "type": "boolean"
+                    },
+                    "zeroTrust": {
+                      "type": "boolean"
+                    },
                     "accountType": {},
                     "deviceId": {},
                     "license": {},
-                    "devices": { "type": "array" },
-                    "nextSteps": { "type": "array" }
+                    "devices": {
+                      "type": "array"
+                    },
+                    "nextSteps": {
+                      "type": "array"
+                    }
                   }
                 }
               }
@@ -157,11 +326,21 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "required": ["daemon", "status", "commands"],
+                  "required": [
+                    "daemon",
+                    "status",
+                    "commands"
+                  ],
                   "properties": {
-                    "daemon": { "type": "object" },
-                    "status": { "type": "object" },
-                    "commands": { "type": "object" }
+                    "daemon": {
+                      "type": "object"
+                    },
+                    "status": {
+                      "type": "object"
+                    },
+                    "commands": {
+                      "type": "object"
+                    }
                   }
                 }
               }
@@ -180,13 +359,25 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "required": ["desired", "interface", "enrollmentPause"],
+                  "required": [
+                    "desired",
+                    "interface",
+                    "enrollmentPause"
+                  ],
                   "properties": {
-                    "desired": { "type": "boolean" },
+                    "desired": {
+                      "type": "boolean"
+                    },
                     "active": {},
-                    "allowLan": { "type": "boolean" },
-                    "interface": { "type": "string" },
-                    "enrollmentPause": { "type": "object" }
+                    "allowLan": {
+                      "type": "boolean"
+                    },
+                    "interface": {
+                      "type": "string"
+                    },
+                    "enrollmentPause": {
+                      "type": "object"
+                    }
                   }
                 }
               }
@@ -205,11 +396,20 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "required": ["ok", "config"],
+                  "required": [
+                    "ok",
+                    "config"
+                  ],
                   "properties": {
-                    "ok": { "type": "boolean" },
-                    "config": { "type": "object" },
-                    "sources": { "type": "object" }
+                    "ok": {
+                      "type": "boolean"
+                    },
+                    "config": {
+                      "type": "object"
+                    },
+                    "sources": {
+                      "type": "object"
+                    }
                   }
                 }
               }
@@ -221,20 +421,35 @@
     "/api/action": {
       "post": {
         "summary": "Whitelisted warp-cli mutation",
-        "security": [{ "localSession": [] }],
+        "security": [
+          {
+            "localSession": []
+          }
+        ],
         "responses": {
-          "403": { "$ref": "#/components/responses/Blocked" },
-          "415": { "$ref": "#/components/responses/Blocked" },
+          "403": {
+            "$ref": "#/components/responses/Blocked"
+          },
+          "415": {
+            "$ref": "#/components/responses/Blocked"
+          },
           "200": {
             "description": "OK",
             "content": {
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "required": ["ok", "result"],
+                  "required": [
+                    "ok",
+                    "result"
+                  ],
                   "properties": {
-                    "ok": { "type": "boolean" },
-                    "result": { "type": "object" }
+                    "ok": {
+                      "type": "boolean"
+                    },
+                    "result": {
+                      "type": "object"
+                    }
                   }
                 }
               }
@@ -253,11 +468,21 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "required": ["ok", "entries", "capacity"],
+                  "required": [
+                    "ok",
+                    "entries",
+                    "capacity"
+                  ],
                   "properties": {
-                    "ok": { "type": "boolean" },
-                    "entries": { "type": "array" },
-                    "capacity": { "type": "number" }
+                    "ok": {
+                      "type": "boolean"
+                    },
+                    "entries": {
+                      "type": "array"
+                    },
+                    "capacity": {
+                      "type": "number"
+                    }
                   }
                 }
               }

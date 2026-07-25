@@ -81,6 +81,18 @@ test("OpenAPI /api/health response shape", async () => {
   assert.equal(res.json.app, "thirdflare");
 });
 
+test("OpenAPI /api/readiness response shape", async () => {
+  const res = await httpJson("GET", "/api/readiness");
+  assert.equal(res.status, 200);
+  assertRequired(res.json, schemaRequired("/api/readiness"), "readiness");
+});
+
+test("OpenAPI /api/diagnostics response shape", async () => {
+  const res = await httpJson("GET", "/api/diagnostics");
+  assert.equal(res.status, 200);
+  assertRequired(res.json, schemaRequired("/api/diagnostics"), "diagnostics");
+});
+
 test("OpenAPI /api/version response shape", async () => {
   const res = await httpJson("GET", "/api/version");
   assert.equal(res.status, 200);

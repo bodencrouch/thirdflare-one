@@ -56,9 +56,10 @@ def connection_control(snapshot: dict[str, Any] | None) -> dict[str, Any]:
   Returns action (connect|disconnect|None), label, and enabled flag.
   """
   snap = snapshot or {}
-  daemon = snap.get("daemon") or {}
+  readiness = snap.get("readiness") or {}
   status = snap.get("status") or {}
-  if not daemon.get("available", True):
+  hard_blocked = bool(readiness.get("hardBlocked"))
+  if hard_blocked or (not readiness and not (snap.get("daemon") or {}).get("available", True)):
     return {"action": None, "label": "Connect", "enabled": False}
   connected = bool(status.get("connected"))
   connecting = bool(status.get("connecting"))
@@ -67,6 +68,20 @@ def connection_control(snapshot: dict[str, Any] | None) -> dict[str, Any]:
   if connected:
     return {"action": "disconnect", "label": "Disconnect", "enabled": True}
   return {"action": "connect", "label": "Connect", "enabled": True}
+
+
+def tray_icon_state(snapshot: dict[str, Any] | None) -> str:
+  """Map snapshot readiness + connection to a tray icon variant name."""
+  snap = snapshot or {}
+  readiness = snap.get("readiness") or {}
+  status = snap.get("status") or {}
+  if readiness.get("needsAttention") or readiness.get("hardBlocked"):
+    return "needs-attention"
+  if status.get("connecting"):
+    return "connecting"
+  if status.get("connected"):
+    return "connected"
+  return "disconnected"
 
 
 class ThirdFlareClient:
