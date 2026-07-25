@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - AppImage self-update installs only after a detached Ed25519 signature from a pinned release key verifies; missing, malformed, and unknown-key signatures fail closed and leave the installed binary untouched
 - Refuse to install a release older than the installed version
 - Fail the release build when an AppImage would ship without its `.sig` sidecar
+- Run the daemon service with `ProtectSystem=strict` and a narrow set of writable paths, restricted socket families, and no namespace, realtime, or SUID access
 
 ### Documentation
 
