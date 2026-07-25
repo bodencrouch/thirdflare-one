@@ -22,6 +22,15 @@ import {
   persistUserUi,
   isValidServerPort
 } from "./lib/config.mjs";
+import {
+  API_SECURITY_HEADERS,
+  createSessionToken,
+  evaluateRequest,
+  removeSessionToken,
+  SESSION_HEADER,
+  SESSION_ROUTE,
+  WEB_SECURITY_HEADERS
+} from "./lib/http/request-gate.mjs";
 import { syncTrayAutostart } from "./lib/tray/autostart.mjs";
 import { getVersion, getVersionInfo } from "./lib/version.mjs";
 import { API_REVISION } from "./lib/api-revision.mjs";
@@ -68,6 +77,7 @@ const publicRoot = join(root, "public");
 const config = reloadConfig();
 const port = Number(config.server?.port || 4173);
 const listenHost = effectiveBind(config);
+const session = createSessionToken(port);
 
 const MIME = {
   ".html": "text/html; charset=utf-8",
@@ -359,7 +369,8 @@ function json(res, status, body) {
   const payload = JSON.stringify(body, null, 2);
   res.writeHead(status, {
     "content-type": "application/json; charset=utf-8",
-    "cache-control": "no-store"
+    "cache-control": "no-store",
+    ...API_SECURITY_HEADERS
   });
   res.end(payload);
 }
@@ -488,6 +499,12 @@ async function accountDetails() {
 
 async function handleApi(req, res, url) {
   try {
+    if (req.method === "GET" && url.pathname === SESSION_ROUTE) {
+      // The request gate already proved this is a same-origin loopback caller.
+      json(res, 200, { ok: true, session: session.token, header: SESSION_HEADER });
+      return;
+    }
+
     if (req.method === "GET" && url.pathname === "/api/health") {
       const active = getConfig();
       json(res, 200, {
@@ -724,7 +741,8 @@ async function handleApi(req, res, url) {
         "content-type": "text/event-stream; charset=utf-8",
         "cache-control": "no-store",
         "connection": "keep-alive",
-        "x-accel-buffering": "no"
+        "x-accel-buffering": "no",
+        ...API_SECURITY_HEADERS
       });
       sse(res, "ready", { ok: true, generatedAt: new Date().toISOString() });
 
@@ -943,7 +961,7 @@ async function handleApi(req, res, url) {
 async function serveStatic(req, res, url) {
   const active = getConfig();
   if (!active.webui?.enabled) {
-    res.writeHead(404, { "content-type": "text/plain; charset=utf-8" });
+    res.writeHead(404, { "content-type": "text/plain; charset=utf-8", ...WEB_SECURITY_HEADERS });
     res.end("Not found");
     return;
   }
@@ -953,24 +971,63 @@ async function serveStatic(req, res, url) {
   const filePath = join(publicRoot, safePath);
 
   if (!filePath.startsWith(publicRoot)) {
-    res.writeHead(403);
+    res.writeHead(403, { ...WEB_SECURITY_HEADERS });
     res.end("Forbidden");
     return;
   }
 
   try {
     const body = await readFile(filePath);
-    res.writeHead(200, { "content-type": MIME[extname(filePath)] || "application/octet-stream" });
+    res.writeHead(200, {
+      "content-type": MIME[extname(filePath)] || "application/octet-stream",
+      ...WEB_SECURITY_HEADERS
+    });
     res.end(body);
   } catch {
     const index = await readFile(join(publicRoot, "index.html"));
-    res.writeHead(200, { "content-type": MIME[".html"] });
+    res.writeHead(200, { "content-type": MIME[".html"], ...WEB_SECURITY_HEADERS });
     res.end(index);
   }
 }
 
+/** Record a blocked request so users can see it in the Console log (never the token or body). */
+function logBlockedRequest(req, url, verdict) {
+  appendFromRunWarp(
+    {
+      command: `${req.method || "GET"} ${url.pathname}`,
+      code: verdict.status,
+      ok: false,
+      stderr: `blocked: ${verdict.reason}`
+    },
+    { source: "security" }
+  );
+}
+
 createServer(async (req, res) => {
-  const url = new URL(req.url || "/", `http://${req.headers.host || "127.0.0.1"}`);
+  // Parse against our own origin: an attacker-controlled Host header must never
+  // influence routing, and a malformed one must not throw.
+  let url;
+  try {
+    url = new URL(req.url || "/", `http://127.0.0.1:${port}`);
+  } catch {
+    json(res, 400, { ok: false, error: "Malformed request." });
+    return;
+  }
+
+  const verdict = evaluateRequest({
+    method: req.method,
+    pathname: url.pathname,
+    headers: req.headers,
+    remoteAddress: req.socket?.remoteAddress,
+    port,
+    sessionToken: session.token
+  });
+  if (!verdict.allowed) {
+    logBlockedRequest(req, url, verdict);
+    json(res, verdict.status, { ok: false, error: verdict.message, reason: verdict.reason });
+    return;
+  }
+
   if (url.pathname.startsWith("/api/")) {
     await handleApi(req, res, url);
     return;
@@ -983,6 +1040,7 @@ createServer(async (req, res) => {
   } else {
     console.log("API-only mode (webui.enabled=false). Static UI is not served.");
   }
+  console.log(`Local session credential: ${session.path}`);
 
   const notifyWatcher = startStatusWatcher({
     statusListener: getStatusListener(),
@@ -1029,6 +1087,7 @@ createServer(async (req, res) => {
   const shutdown = () => {
     notifyWatcher.stop();
     getStatusListener().stop();
+    removeSessionToken(port);
     process.exit(0);
   };
   process.on("SIGINT", shutdown);

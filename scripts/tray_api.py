@@ -15,6 +15,12 @@ DEFAULT_PORT = 4173
 PORT_SCAN = 31
 
 
+def session_token_path(port: int) -> str:
+  """Mirror lib/http/request-gate.mjs sessionTokenPath()."""
+  home = os.environ.get("HOME") or os.path.expanduser("~")
+  return os.path.join(home, ".config", "thirdflare", f"session-{port}.token")
+
+
 def app_dir() -> str:
   env = os.environ.get("THIRDFLARE_APP_DIR")
   if env:
@@ -71,9 +77,11 @@ class ThirdFlareClient:
     env_port = os.environ.get("THIRDFLARE_PORT") or os.environ.get("CLOUDFLARE_ONE_GUI_PORT")
     self.base_port = int(env_port) if env_port else DEFAULT_PORT
     self.base_url: str | None = None
+    self.session: str | None = None
     self.discover()
 
   def discover(self) -> bool:
+    self.session = None
     for port in range(self.base_port, self.base_port + PORT_SCAN):
       url = f"http://{self.host}:{port}/api/health"
       try:
@@ -89,27 +97,72 @@ class ThirdFlareClient:
     self.base_url = None
     return False
 
-  def _request(self, method: str, path: str, body: dict[str, Any] | None = None) -> dict[str, Any]:
-    if not self.base_url and not self.discover():
-      raise RuntimeError("ThirdFlare One daemon is not running.")
+  def load_session(self, refresh: bool = False) -> str | None:
+    """Read this daemon's session credential from disk, or ask the daemon for it."""
+    if self.session and not refresh:
+      return self.session
+    try:
+      with open(session_token_path(self.base_port), encoding="utf-8") as handle:
+        token = handle.read().strip()
+      if token:
+        self.session = token
+        return token
+    except OSError:
+      pass
+    if self.base_url:
+      try:
+        request = urllib.request.Request(
+          f"{self.base_url}/api/session",
+          headers={"Accept": "application/json"},
+          method="GET",
+        )
+        with urllib.request.urlopen(request, timeout=5) as response:
+          payload = json.loads(response.read().decode("utf-8"))
+        token = str(payload.get("session") or "")
+        if token:
+          self.session = token
+          return token
+      except (OSError, urllib.error.URLError, json.JSONDecodeError, TimeoutError):
+        pass
+    self.session = None
+    return None
+
+  def _send(self, method: str, path: str, body: dict[str, Any] | None) -> str:
     assert self.base_url
     data = None
     headers = {"Accept": "application/json"}
     if body is not None:
       data = json.dumps(body).encode("utf-8")
       headers["Content-Type"] = "application/json"
+    if method.upper() != "GET":
+      token = self.load_session()
+      if token:
+        headers["X-Thirdflare-Session"] = token
     request = urllib.request.Request(
       f"{self.base_url}{path}",
       data=data,
       headers=headers,
       method=method,
     )
+    with urllib.request.urlopen(request, timeout=20) as response:
+      return response.read().decode("utf-8")
+
+  def _request(self, method: str, path: str, body: dict[str, Any] | None = None) -> dict[str, Any]:
+    if not self.base_url and not self.discover():
+      raise RuntimeError("ThirdFlare One daemon is not running.")
     try:
-      with urllib.request.urlopen(request, timeout=20) as response:
-        raw = response.read().decode("utf-8")
+      raw = self._send(method, path, body)
     except urllib.error.HTTPError as exc:
-      detail = exc.read().decode("utf-8", errors="replace")
-      raise RuntimeError(detail or str(exc)) from exc
+      # A restarted daemon has a new credential; refresh once before giving up.
+      if exc.code == 403 and method.upper() != "GET" and self.load_session(refresh=True):
+        try:
+          raw = self._send(method, path, body)
+        except urllib.error.HTTPError as retry_exc:
+          detail = retry_exc.read().decode("utf-8", errors="replace")
+          raise RuntimeError(detail or str(retry_exc)) from retry_exc
+      else:
+        detail = exc.read().decode("utf-8", errors="replace")
+        raise RuntimeError(detail or str(exc)) from exc
     if not raw.strip():
       return {}
     return json.loads(raw)

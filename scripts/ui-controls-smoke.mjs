@@ -6,9 +6,9 @@ import { chromium } from "@playwright/test";
 import { existsSync } from "node:fs";
 import { mkdtemp, mkdir, writeFile } from "node:fs/promises";
 import { spawn } from "node:child_process";
-import { request } from "node:http";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
+import { createHttpJson } from "./ci-http-client.mjs";
 
 const root = process.cwd();
 const port = Number(process.env.CI_UI_PORT || 14741);
@@ -31,38 +31,7 @@ Icon=web-browser
   "utf8"
 );
 
-function httpJson(method, path, body) {
-  return new Promise((resolve, reject) => {
-    const payload = body ? JSON.stringify(body) : null;
-    const req = request(
-      {
-        host: "127.0.0.1",
-        port,
-        path,
-        method,
-        headers: body
-          ? { "content-type": "application/json", "content-length": Buffer.byteLength(payload) }
-          : {}
-      },
-      (res) => {
-        let text = "";
-        res.on("data", (c) => {
-          text += c;
-        });
-        res.on("end", () => {
-          try {
-            resolve({ status: res.statusCode, json: text ? JSON.parse(text) : null });
-          } catch {
-            resolve({ status: res.statusCode, json: null });
-          }
-        });
-      }
-    );
-    req.on("error", reject);
-    if (payload) req.write(payload);
-    req.end();
-  });
-}
+const httpJson = createHttpJson(`http://127.0.0.1:${port}`);
 
 const child = spawn(process.execPath, ["server.js"], {
   cwd: root,
