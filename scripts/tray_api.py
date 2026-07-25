@@ -131,10 +131,15 @@ class ThirdFlareClient:
     assert self.base_url
     data = None
     headers = {"Accept": "application/json"}
-    if body is not None:
-      data = json.dumps(body).encode("utf-8")
+    if method.upper() == "GET":
+      if body is not None:
+        data = json.dumps(body).encode("utf-8")
+        headers["Content-Type"] = "application/json"
+    else:
+      # The daemon only accepts JSON for anything that changes state, so send an
+      # empty object rather than no body at all.
+      data = json.dumps(body if body is not None else {}).encode("utf-8")
       headers["Content-Type"] = "application/json"
-    if method.upper() != "GET":
       token = self.load_session()
       if token:
         headers["X-Thirdflare-Session"] = token
