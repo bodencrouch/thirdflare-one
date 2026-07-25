@@ -46,6 +46,7 @@ ThirdFlare One — unofficial third-party Cloudflare One client
 Usage:
   thirdflare                    Start the native tray + app shell (same as thirdflare-one-tray)
   thirdflare --no-open          Start/reuse the daemon (API-only by default)
+  thirdflare --daemon           Start/reuse the daemon with Web UI enabled
   thirdflare --status           Print daemon status
   thirdflare --stop             Stop the managed daemon
   thirdflare --warp-action       Connect or disconnect WARP via daemon API (no browser)
@@ -73,6 +74,14 @@ is_running() {
 
 health_ok() {
   "$NODE_BIN" "$APP_DIR/scripts/health-check.mjs" "$URL/api/health" >/dev/null 2>&1
+}
+
+webui_health_ok() {
+  "$NODE_BIN" "$APP_DIR/scripts/health-webui-check.mjs" "$URL/api/health" --require-webui >/dev/null 2>&1
+}
+
+needs_webui() {
+  [[ "${THIRDFLARE_WEBUI:-0}" == "1" || "${THIRDFLARE_WEBUI:-0}" == "true" ]]
 }
 
 daemon_ready() {
@@ -123,7 +132,11 @@ choose_port() {
 start_server() {
   choose_port
 
-  if daemon_ready && daemon_pid_matches_install; then
+  if needs_webui; then
+    if daemon_ready && daemon_pid_matches_install && webui_health_ok; then
+      return 0
+    fi
+  elif daemon_ready && daemon_pid_matches_install; then
     return 0
   fi
 
@@ -265,6 +278,11 @@ case "${1:-}" in
     exec "$APP_DIR/bin/thirdflare-tray" --panel
     ;;
   --no-open)
+    start_server
+    echo "$URL"
+    ;;
+  --daemon)
+    export THIRDFLARE_WEBUI=1
     start_server
     echo "$URL"
     ;;

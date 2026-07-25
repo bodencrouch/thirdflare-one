@@ -27,23 +27,20 @@ def launcher_path(root: str | None = None) -> str:
   return os.path.join(root, "bin", "thirdflare")
 
 
-def ensure_daemon(launcher: str | None = None) -> None:
+def ensure_daemon(launcher: str | None = None, *, webui: bool = True) -> None:
+  """Start or reuse the daemon. Desktop shells request Web UI capability."""
   launcher = launcher or launcher_path()
-  probe = subprocess.run(
-    [launcher, "--status"],
-    check=False,
-    stdout=subprocess.DEVNULL,
-    stderr=subprocess.DEVNULL,
-    timeout=5,
-  )
-  if probe.returncode == 0:
-    return
+  env = os.environ.copy()
+  args = [launcher, "--daemon"] if webui else [launcher, "--no-open"]
+  if webui:
+    env["THIRDFLARE_WEBUI"] = "1"
   subprocess.run(
-    [launcher, "--no-open"],
+    args,
     check=False,
     stdout=subprocess.DEVNULL,
     stderr=subprocess.DEVNULL,
-    timeout=15,
+    timeout=20,
+    env=env,
   )
 
 
@@ -87,6 +84,7 @@ class ThirdFlareClient:
       app_id = payload.get("app")
       if payload.get("ok") and app_id in ("thirdflare", "thirdflare-one", "cloudflare-one-gui"):
         self.base_url = f"http://{self.host}:{port}"
+        self.base_port = port
         return True
     self.base_url = None
     return False
@@ -122,32 +120,30 @@ class ThirdFlareClient:
   def post(self, path: str, body: dict[str, Any] | None = None) -> dict[str, Any]:
     return self._request("POST", path, body)
 
+  def health(self) -> dict[str, Any]:
+    return self.get("/api/health")
+
   def snapshot(self) -> dict[str, Any]:
     return self.get("/api/snapshot")
 
   def action(self, name: str) -> dict[str, Any]:
     return self.post("/api/action", {"action": name})
 
-  def enable_webui_session(self) -> None:
-    self.post("/api/config/session", {"config": {"webui": {"enabled": True}}})
-
   def webui_enabled(self) -> bool:
     try:
-      payload = self.get("/api/config")
-      return bool(payload.get("config", {}).get("webui", {}).get("enabled"))
+      return bool(self.health().get("webuiEnabled"))
     except Exception:
       return False
 
-  def ensure_webui(self, launcher: str | None = None) -> None:
+  def ensure_daemon_webui(self, launcher: str | None = None) -> None:
+    """Ensure daemon serves the Web UI; persist enable and restart if needed."""
     launcher = launcher or launcher_path()
     if self.webui_enabled():
       return
     try:
-      self.enable_webui_session()
+      self.post("/api/config/webui", {"enabled": True})
     except Exception:
       pass
-    if self.webui_enabled():
-      return
     subprocess.run(
       [launcher, "--stop"],
       check=False,
@@ -158,11 +154,36 @@ class ThirdFlareClient:
     env = os.environ.copy()
     env["THIRDFLARE_WEBUI"] = "1"
     subprocess.run(
-      [launcher, "--no-open"],
+      [launcher, "--daemon"],
       check=False,
       stdout=subprocess.DEVNULL,
       stderr=subprocess.DEVNULL,
-      timeout=15,
+      timeout=20,
+      env=env,
+    )
+    self.discover()
+
+  def restart_daemon(self, launcher: str | None = None, *, webui: bool | None = None) -> None:
+    launcher = launcher or launcher_path()
+    env = os.environ.copy()
+    if webui is True:
+      env["THIRDFLARE_WEBUI"] = "1"
+    elif webui is False:
+      env["THIRDFLARE_WEBUI"] = "0"
+    subprocess.run(
+      [launcher, "--stop"],
+      check=False,
+      stdout=subprocess.DEVNULL,
+      stderr=subprocess.DEVNULL,
+      timeout=10,
+    )
+    args = [launcher, "--daemon"] if (webui is not False) else [launcher, "--no-open"]
+    subprocess.run(
+      args,
+      check=False,
+      stdout=subprocess.DEVNULL,
+      stderr=subprocess.DEVNULL,
+      timeout=20,
       env=env,
     )
     self.discover()

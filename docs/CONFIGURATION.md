@@ -40,7 +40,9 @@ sudo cp packaging/thirdflare.default /etc/default/thirdflare
 | `enabled` | boolean | `false` | Serve static Web UI and PWA assets |
 | `allowRemote` | boolean | `false` | When enabled, bind `0.0.0.0` for LAN access |
 
-**Defaults:** systemd daemon runs with Web UI **off** (`THIRDFLARE_WEBUI=0`). Running `thirdflare` (no flags) exports `THIRDFLARE_WEBUI=1` for that process tree so the browser shell works locally.
+**Defaults:** systemd daemon runs with Web UI **off** (`THIRDFLARE_WEBUI=0`). The native tray and `thirdflare --daemon` start with Web UI **on** (`THIRDFLARE_WEBUI=1`). When enabled, the daemon always serves static assets — there is no runtime disable toggle.
+
+**Configure on KDE Plasma:** `thirdflare-one-tray --settings` or **ThirdFlare One Settings** in the app launcher (Settings category).
 
 ### `warp`
 
@@ -176,7 +178,23 @@ curl -s -X POST http://127.0.0.1:4173/api/config/session \
   -d '{"clear":true}'
 ```
 
-**Restart required** after changing `server.port`, `server.bind`, or `webui.allowRemote`.
+**Restart required** after changing `server.port`, `server.bind`, `webui.enabled`, or `webui.allowRemote`.
+
+Persist Web UI, server, UI notifications, and tray autostart:
+
+```bash
+curl -s -X POST http://127.0.0.1:4173/api/config/webui \
+  -H 'content-type: application/json' -d '{"enabled":true}'
+
+curl -s -X POST http://127.0.0.1:4173/api/config/server \
+  -H 'content-type: application/json' -d '{"port":4173}'
+
+curl -s -X POST http://127.0.0.1:4173/api/config/ui \
+  -H 'content-type: application/json' -d '{"notifications":true}'
+
+curl -s -X POST http://127.0.0.1:4173/api/config/tray-autostart \
+  -H 'content-type: application/json' -d '{"autostart":true}'
+```
 
 ## Platform notes
 

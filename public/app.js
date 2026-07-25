@@ -37,6 +37,7 @@ const state = {
   error: null,
   toast: null,
   version: null,
+  health: null,
   appConfig: null,
   update: {
     checking: false,
@@ -118,6 +119,30 @@ const app = document.querySelector("#app");
 
 function isNativeShell() {
   return new URLSearchParams(window.location.search).get("shell") === "1";
+}
+
+function initNativeBridge() {
+  if (!isNativeShell() || window.thirdflare) return;
+  if (typeof qt === "undefined") return;
+  const script = document.createElement("script");
+  script.src = "qrc:///qtwebchannel/qwebchannel.js";
+  script.onload = () => {
+    if (typeof QWebChannel === "undefined" || typeof qt === "undefined") return;
+    // eslint-disable-next-line no-undef
+    new QWebChannel(qt.webChannelTransport, (channel) => {
+      window.thirdflare = channel.objects.thirdflare;
+    });
+  };
+  document.head.appendChild(script);
+}
+
+function openSystemSettings() {
+  if (window.thirdflare?.openSettings) {
+    window.thirdflare.openSettings();
+    return;
+  }
+  state.toast = t("app.openSettingsUnavailable");
+  render();
 }
 
 function useExpertLayout() {
@@ -1828,6 +1853,28 @@ function appView() {
   };
   general.append(localeRow);
 
+  const webuiEnabled = state.health?.webuiEnabled === true;
+  const effectivePort = state.health?.effectivePort ?? state.appConfig?.server?.port ?? "…";
+  const daemonPanel = el("section", "panel");
+  daemonPanel.innerHTML = `<div class="panel-heading"><h3>${t("app.daemon")}</h3><span>HTTP</span></div>`;
+  const daemonGrid = el("div", "state-grid");
+  daemonGrid.innerHTML = `
+    <div class="state-datum"><span>${t("app.webuiMode")}</span><strong>${escapeHtml(webuiEnabled ? t("app.webuiEnabled") : t("app.webuiApiOnly"))}</strong></div>
+    <div class="state-datum"><span>${t("app.httpPort")}</span><strong>${escapeHtml(String(effectivePort))}</strong></div>
+  `;
+  daemonPanel.append(daemonGrid);
+  if (isNativeShell()) {
+    const settingsBtn = el("button", "secondary", t("app.openSystemSettings"));
+    settingsBtn.type = "button";
+    settingsBtn.dataset.testid = "open-system-settings";
+    settingsBtn.onclick = () => openSystemSettings();
+    daemonPanel.append(settingsBtn);
+  } else {
+    const hint = el("p", "panel-hint", t("app.webuiConfigHint"));
+    daemonPanel.append(hint);
+  }
+  general.append(daemonPanel);
+
   const trayAutostart = Boolean(state.appConfig?.tray?.autostart);
   const trayRow = el("div", "switch-row");
   trayRow.innerHTML = `
@@ -1841,8 +1888,10 @@ function appView() {
   trayToggle.setAttribute("role", "switch");
   trayToggle.setAttribute("aria-checked", trayAutostart ? "true" : "false");
   trayToggle.setAttribute("aria-label", t("app.trayAutostart"));
-  trayToggle.disabled = state.busy;
-  trayToggle.onclick = () => setTrayAutostart(!trayAutostart);
+  trayToggle.disabled = state.busy || isNativeShell();
+  if (!isNativeShell()) {
+    trayToggle.onclick = () => setTrayAutostart(!trayAutostart);
+  }
   trayRow.append(trayToggle);
   general.append(trayRow);
 
@@ -2161,13 +2210,15 @@ async function loadUpdateCatalog({ force = false } = {}) {
 
 async function loadAppPanel() {
   try {
-    const [versionRes, configRes] = await Promise.all([
+    const [versionRes, configRes, healthRes] = await Promise.all([
       fetch("/api/version"),
-      fetch("/api/config")
+      fetch("/api/config"),
+      fetch("/api/health")
     ]);
     state.version = await versionRes.json();
     const configBody = await configRes.json();
     state.appConfig = configBody.config;
+    state.health = await healthRes.json();
     const source = state.appConfig?.updates?.source;
     if (source) {
       state.update.selectedOwner = source.owner;
@@ -2596,6 +2647,7 @@ async function boot() {
   }
   if (isNativeShell()) {
     document.body.classList.add("native-shell");
+    initNativeBridge();
   }
   render();
   applyRouteFromHash();
@@ -2616,7 +2668,13 @@ function connectLiveEvents() {
     return;
   }
 
+  if (connectLiveEvents.source) {
+    connectLiveEvents.source.close();
+    connectLiveEvents.source = null;
+  }
+
   const events = new EventSource("/api/events");
+  connectLiveEvents.source = events;
 
   events.addEventListener("ready", () => {
     state.live.connected = true;
@@ -2685,6 +2743,13 @@ function connectLiveEvents() {
     patchLiveChrome();
   });
 }
+
+connectLiveEvents.source = null;
+
+window.addEventListener("pagehide", () => {
+  connectLiveEvents.source?.close();
+  connectLiveEvents.source = null;
+});
 
 function registerServiceWorker() {
   if (!("serviceWorker" in navigator)) return;

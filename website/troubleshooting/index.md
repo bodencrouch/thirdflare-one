@@ -13,13 +13,17 @@ Check warp-cli daemon:
 warp-cli status
 ```
 
-## Web UI 503
+## Web UI blank or 404
 
-Web UI disabled. Enable via config, session API, or:
+The daemon may be in **API-only** mode (`webui.enabled=false`). Enable Web UI and restart:
 
 ```bash
-THIRDFLARE_WEBUI=1 thirdflare --no-open
+thirdflare-one-tray --settings
+# or
+THIRDFLARE_WEBUI=1 thirdflare --daemon
 ```
+
+When Web UI is enabled, static assets are always served. API-only mode returns 404 for `/app.js` and other UI paths.
 
 ## Tray missing (KDE)
 

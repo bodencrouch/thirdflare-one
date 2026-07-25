@@ -16,7 +16,11 @@ import {
   setSessionUpdateSource,
   setSessionKillSwitch,
   persistUserKillSwitch,
-  persistUserTrayAutostart
+  persistUserTrayAutostart,
+  persistUserWebUi,
+  persistUserServer,
+  persistUserUi,
+  isValidServerPort
 } from "./lib/config.mjs";
 import { syncTrayAutostart } from "./lib/tray/autostart.mjs";
 import { getVersion, getVersionInfo } from "./lib/version.mjs";
@@ -26,6 +30,7 @@ import { listForks, listReleases } from "./lib/update/github.mjs";
 import { detectInstallFormat } from "./lib/update/detect-format.mjs";
 import { isSafeGithubRef } from "./lib/update/detect-format.mjs";
 import { parseStatus } from "./lib/warp/status.mjs";
+import { createStatusListener } from "./lib/warp/status-listener.mjs";
 import { enrichSettings, parseSettings } from "./lib/warp/settings.mjs";
 import { enrichSplitTunnel } from "./lib/warp/split-tunnel.mjs";
 import { createProxyLauncher, listDesktopApps } from "./lib/apps/proxy-launcher.mjs";
@@ -176,6 +181,19 @@ function spawnWarpCli(warpArgs, options = {}) {
     return spawn(process.execPath, [cmd, ...warpArgs], options);
   }
   return spawn(cmd, warpArgs, options);
+}
+
+/** @type {ReturnType<typeof createStatusListener> | null} */
+let statusListener = null;
+
+function getStatusListener() {
+  if (!statusListener) {
+    statusListener = createStatusListener({
+      spawnWarpCli,
+      redactLine: (line) => redactWarpOutput(line)
+    });
+  }
+  return statusListener;
 }
 
 function runWarp(args, options = {}) {
@@ -471,12 +489,15 @@ async function accountDetails() {
 async function handleApi(req, res, url) {
   try {
     if (req.method === "GET" && url.pathname === "/api/health") {
+      const active = getConfig();
       json(res, 200, {
         ok: true,
         app: APP_ID,
         name: APP_DISPLAY_NAME,
         version: getVersion(),
         apiRevision: API_REVISION,
+        webuiEnabled: Boolean(active.webui?.enabled),
+        effectivePort: Number(active.server?.port || port),
         generatedAt: new Date().toISOString()
       });
       return;
@@ -588,8 +609,14 @@ async function handleApi(req, res, url) {
           port: Number(active.server?.port || port)
         },
         notes: {
-          restartRequired: ["server.port", "server.bind", "webui.allowRemote"],
-          sessionOnly: "POST /api/config/session overrides apply until the daemon restarts."
+          restartRequired: ["server.port", "server.bind", "webui.enabled", "webui.allowRemote"],
+          sessionOnly: "POST /api/config/session overrides apply until the daemon restarts.",
+          persistEndpoints: [
+            "POST /api/config/webui",
+            "POST /api/config/server",
+            "POST /api/config/ui",
+            "POST /api/config/tray-autostart"
+          ]
         }
       });
       return;
@@ -622,6 +649,76 @@ async function handleApi(req, res, url) {
       return;
     }
 
+    if (req.method === "POST" && url.pathname === "/api/config/webui") {
+      const body = await readJson(req);
+      if (body?.enabled != null && typeof body.enabled !== "boolean") {
+        json(res, 400, { ok: false, error: "enabled must be a boolean" });
+        return;
+      }
+      if (body?.allowRemote != null && typeof body.allowRemote !== "boolean") {
+        json(res, 400, { ok: false, error: "allowRemote must be a boolean" });
+        return;
+      }
+      if (body?.enabled == null && body?.allowRemote == null) {
+        json(res, 400, { ok: false, error: "Provide enabled and/or allowRemote" });
+        return;
+      }
+      const config = persistUserWebUi({
+        enabled: body.enabled,
+        allowRemote: body.allowRemote
+      });
+      json(res, 200, {
+        ok: true,
+        config,
+        restartRequired: true
+      });
+      return;
+    }
+
+    if (req.method === "POST" && url.pathname === "/api/config/server") {
+      const body = await readJson(req);
+      if (body?.port != null) {
+        const portNum = Number(body.port);
+        if (!isValidServerPort(portNum)) {
+          json(res, 400, { ok: false, error: "port must be an integer from 1024 to 65535" });
+          return;
+        }
+      }
+      if (body?.bind != null && (typeof body.bind !== "string" || !body.bind.trim())) {
+        json(res, 400, { ok: false, error: "bind must be a non-empty string" });
+        return;
+      }
+      if (body?.port == null && body?.bind == null) {
+        json(res, 400, { ok: false, error: "Provide port and/or bind" });
+        return;
+      }
+      const config = persistUserServer({
+        port: body.port != null ? Number(body.port) : undefined,
+        bind: body.bind
+      });
+      json(res, 200, {
+        ok: true,
+        config,
+        restartRequired: true
+      });
+      return;
+    }
+
+    if (req.method === "POST" && url.pathname === "/api/config/ui") {
+      const body = await readJson(req);
+      if (body?.notifications != null && typeof body.notifications !== "boolean") {
+        json(res, 400, { ok: false, error: "notifications must be a boolean" });
+        return;
+      }
+      if (body?.notifications == null) {
+        json(res, 400, { ok: false, error: "Provide notifications" });
+        return;
+      }
+      const config = persistUserUi({ notifications: body.notifications });
+      json(res, 200, { ok: true, config });
+      return;
+    }
+
     if (req.method === "GET" && url.pathname === "/api/events") {
       res.writeHead(200, {
         "content-type": "text/event-stream; charset=utf-8",
@@ -631,49 +728,26 @@ async function handleApi(req, res, url) {
       });
       sse(res, "ready", { ok: true, generatedAt: new Date().toISOString() });
 
-      const child = spawnWarpCli(["--no-ansi", "--no-paginate", "--listen", "status"], {
-        stdio: ["ignore", "pipe", "pipe"]
-      });
-      let stdout = "";
-      let stderr = "";
       const heartbeat = setInterval(() => {
         sse(res, "heartbeat", { generatedAt: new Date().toISOString() });
       }, 25000);
 
-      child.stdout.on("data", (chunk) => {
-        stdout += chunk.toString();
-        const lines = stdout.split(/\r?\n/);
-        stdout = lines.pop() || "";
-        for (const line of lines) {
-          const clean = redactWarpOutput(line.trim());
-          if (clean) sse(res, "warp", { line: clean, status: parseStatus(clean), generatedAt: new Date().toISOString() });
-        }
+      const unsub = getStatusListener().subscribe((payload) => {
+        const eventName = payload.kind === "error" ? "error" : "warp";
+        sse(res, eventName, {
+          line: payload.line,
+          status: payload.status,
+          generatedAt: payload.generatedAt
+        });
       });
 
-      child.stderr.on("data", (chunk) => {
-        stderr += chunk.toString();
-        const lines = stderr.split(/\r?\n/);
-        stderr = lines.pop() || "";
-        for (const line of lines) {
-          const clean = redactWarpOutput(line.trim());
-          if (clean) sse(res, "error", { line: clean, generatedAt: new Date().toISOString() });
-        }
-      });
-
-      child.on("error", (error) => {
-        sse(res, "error", { line: error.message, generatedAt: new Date().toISOString() });
-      });
-
-      child.on("close", (code) => {
+      const cleanup = () => {
         clearInterval(heartbeat);
-        sse(res, "closed", { code, generatedAt: new Date().toISOString() });
-        res.end();
-      });
+        unsub();
+      };
 
-      req.on("close", () => {
-        clearInterval(heartbeat);
-        child.kill();
-      });
+      req.on("close", cleanup);
+      res.on("close", cleanup);
       return;
     }
 
@@ -868,9 +942,9 @@ async function handleApi(req, res, url) {
 
 async function serveStatic(req, res, url) {
   const active = getConfig();
-  if (!active.webui?.enabled && url.pathname !== "/" && !url.pathname.startsWith("/api/")) {
-    res.writeHead(503, { "content-type": "text/plain; charset=utf-8" });
-    res.end("ThirdFlare One Web UI is disabled. Enable webui.enabled in config or the in-app Settings page.");
+  if (!active.webui?.enabled) {
+    res.writeHead(404, { "content-type": "text/plain; charset=utf-8" });
+    res.end("Not found");
     return;
   }
   let pathname = decodeURIComponent(url.pathname);
@@ -904,12 +978,14 @@ createServer(async (req, res) => {
   await serveStatic(req, res, url);
 }).listen(port, listenHost, () => {
   console.log(`${APP_DISPLAY_NAME} running at http://${listenHost}:${port}`);
-  if (!getConfig().webui?.enabled) {
-    console.log("Web UI disabled (webui.enabled=false). API and launcher quick actions remain available.");
+  if (getConfig().webui?.enabled) {
+    console.log("Web UI enabled — serving static assets from public/.");
+  } else {
+    console.log("API-only mode (webui.enabled=false). Static UI is not served.");
   }
 
   const notifyWatcher = startStatusWatcher({
-    spawnWarpCli,
+    statusListener: getStatusListener(),
     enabled: getConfig().ui?.notifications !== false,
     env: process.env
   });
@@ -952,6 +1028,7 @@ createServer(async (req, res) => {
 
   const shutdown = () => {
     notifyWatcher.stop();
+    getStatusListener().stop();
     process.exit(0);
   };
   process.on("SIGINT", shutdown);

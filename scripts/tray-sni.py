@@ -214,22 +214,9 @@ def capture_text(command: list[str]) -> str:
 
 
 def ensure_daemon(launcher: str) -> None:
-  probe = subprocess.run(
-    [launcher, "--status"],
-    check=False,
-    stdout=subprocess.DEVNULL,
-    stderr=subprocess.DEVNULL,
-    timeout=5,
-  )
-  if probe.returncode == 0:
-    return
-  subprocess.run(
-    [launcher, "--no-open"],
-    check=False,
-    stdout=subprocess.DEVNULL,
-    stderr=subprocess.DEVNULL,
-    timeout=10,
-  )
+  from tray_api import ensure_daemon as ensure_daemon_api
+
+  ensure_daemon_api(launcher, webui=True)
 
 
 def status_text(launcher: str) -> str:

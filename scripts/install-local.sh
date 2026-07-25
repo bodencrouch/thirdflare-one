@@ -146,6 +146,22 @@ DESKTOP
     update-desktop-database "$APPLICATIONS_DIR" >/dev/null 2>&1 || true
   fi
   echo "Installed desktop entry ${DESKTOP_FILE}"
+
+  SETTINGS_DESKTOP="${APPLICATIONS_DIR}/thirdflare-one-settings.desktop"
+  cat > "$SETTINGS_DESKTOP" <<SETTINGS
+[Desktop Entry]
+Type=Application
+Name=ThirdFlare One Settings
+Comment=Configure ThirdFlare One Web UI, port, and tray preferences
+Exec=${INSTALL_DIR}/bin/thirdflare-tray --settings
+Icon=thirdflare-one
+Terminal=false
+Categories=Settings;Network;
+Keywords=Cloudflare;WARP;ThirdFlare;Settings;Preferences;
+StartupNotify=true
+SETTINGS
+  chmod 0644 "$SETTINGS_DESKTOP"
+  echo "Installed desktop entry ${SETTINGS_DESKTOP}"
 fi
 
 if [[ -f "${INSTALL_DIR}/scripts/sync-tray-autostart.mjs" ]]; then

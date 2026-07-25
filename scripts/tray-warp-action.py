@@ -10,7 +10,7 @@ from tray_api import ThirdFlareClient, connection_control, ensure_daemon, launch
 
 def main() -> int:
   launcher = launcher_path()
-  ensure_daemon(launcher)
+  ensure_daemon(launcher, webui=False)
   client = ThirdFlareClient()
   try:
     outcome = client.run_connection_action()

@@ -25,6 +25,7 @@ ThirdFlare One tray
 Usage:
   thirdflare-one-tray            Start the tray + native app shell (background)
   thirdflare-one-tray --panel    Show the native app window (starts tray if needed)
+  thirdflare-one-tray --settings Open ThirdFlare One preferences (PyQt6)
   thirdflare-one-tray --stop     Stop the tray
   thirdflare-one-tray --check    Print tray readiness (exit 0 when ready)
   thirdflare-one-tray --status   Show WARP status (notify when available)
@@ -208,7 +209,7 @@ ensure_daemon() {
   if ! "$LAUNCHER" --status >/dev/null 2>&1; then
     echo "Starting ThirdFlare One daemon for tray actions..." >&2
   fi
-  "$LAUNCHER" --no-open >/dev/null
+  THIRDFLARE_WEBUI=1 "$LAUNCHER" --daemon >/dev/null
 }
 
 tray_process_running() {
@@ -464,6 +465,14 @@ case "${1:-}" in
     ;;
   --panel)
     show_tray_panel
+    ;;
+  --settings)
+    if tray_qt_available; then
+      THIRDFLARE_APP_DIR="$APP_DIR" "$(tray_python_bin)" "$QT_TRAY" --settings "$@"
+    else
+      echo "ThirdFlare One settings requires PyQt6 (thirdflare-one-tray --check)." >&2
+      exit 1
+    fi
     ;;
   "")
     run_tray
