@@ -7,6 +7,7 @@ import { existsSync } from "node:fs";
 import { spawn } from "node:child_process";
 import { join } from "node:path";
 import { createHttpJson } from "./ci-http-client.mjs";
+import { waitForPredicate } from "./ui-wait.mjs";
 
 const root = process.cwd();
 const port = Number(process.env.CI_UI_PORT || 14740);
@@ -44,6 +45,8 @@ async function waitHealth() {
   throw new Error("Server did not become healthy in time");
 }
 
+let browser;
+
 try {
   await waitHealth();
   await httpJson("POST", "/api/action", { action: "disconnect" });
@@ -56,7 +59,7 @@ try {
   if (systemChrome && process.env.PLAYWRIGHT_USE_BUNDLED !== "1") {
     launchOpts.executablePath = systemChrome;
   }
-  const browser = await chromium.launch(launchOpts);
+  browser = await chromium.launch(launchOpts);
   const page = await browser.newPage();
   await page.goto(`http://127.0.0.1:${port}/`, { waitUntil: "domcontentloaded", timeout: 30000 });
   await page.locator("[data-testid='log-dock']").waitFor({ timeout: 20000 });
@@ -72,13 +75,14 @@ try {
   });
   if (!dockPinned) throw new Error("log-dock not pinned to viewport in native expert shell");
   await page.locator("[data-log-tab='console']").click();
-  await page.waitForFunction(
+  await waitForPredicate(
+    page,
     () => {
       const tab = document.querySelector("[data-log-tab='console']");
       const body = document.querySelector(".log-dock-body");
-      return tab?.classList.contains("active") && body?.querySelector(".log-dock-console, .log-console-empty");
+      return Boolean(tab?.classList.contains("active") && body?.querySelector(".log-dock-console, .log-console-empty"));
     },
-    { timeout: 10000 }
+    { timeout: 10000, message: "console log tab did not activate" }
   );
   const toggle = page.locator("[data-testid='connection-toggle']");
   await toggle.waitFor({ timeout: 20000 });
@@ -86,12 +90,13 @@ try {
   await page.reload({ waitUntil: "domcontentloaded" });
   await toggle.waitFor({ timeout: 20000 });
   await toggle.click();
-  await page.waitForFunction(
+  await waitForPredicate(
+    page,
     () => {
       const el = document.querySelector("[data-testid='connection-toggle']");
-      return el && (el.getAttribute("aria-pressed") === "true" || /disconnect/i.test(el.textContent || ""));
+      return Boolean(el && (el.getAttribute("aria-pressed") === "true" || /disconnect/i.test(el.textContent || "")));
     },
-    { timeout: 15000 }
+    { timeout: 15000, message: "connection toggle did not reach the connected state" }
   );
 
   await page.locator("[data-nav='account']").click();
@@ -101,33 +106,33 @@ try {
   await page.getByRole("heading", { name: "App routing" }).waitFor({ timeout: 15000 });
   const routingDump = page.locator("details[data-panel-id='split-dump'] summary");
   await routingDump.click();
-  await page.waitForFunction(
-    () => document.querySelector("details[data-panel-id='split-dump']")?.open === true,
-    { timeout: 5000 }
-  );
+  const dumpOpen = () => document.querySelector("details[data-panel-id='split-dump']")?.open === true;
+  await waitForPredicate(page, dumpOpen, { timeout: 5000, message: "split dump panel did not open" });
   await page.waitForTimeout(3500);
-  await page.waitForFunction(
-    () => document.querySelector("details[data-panel-id='split-dump']")?.open === true,
-    { timeout: 5000 }
-  );
+  await waitForPredicate(page, dumpOpen, { timeout: 5000, message: "split dump panel closed itself on refresh" });
   await httpJson("POST", "/api/action", { action: "deleteRegistration" });
   await page.reload({ waitUntil: "domcontentloaded" });
   await page.locator("[data-nav='account']").click();
   await page.locator("[data-testid='account-register']").click();
-  await page.waitForFunction(
+  await waitForPredicate(
+    page,
     () => {
       const strip = document.querySelector(".account-status-strip");
-      return strip && /Registered/i.test(strip.textContent || "") && !/Not registered/i.test(strip.textContent || "");
+      return Boolean(
+        strip && /Registered/i.test(strip.textContent || "") && !/Not registered/i.test(strip.textContent || "")
+      );
     },
-    { timeout: 15000 }
+    { timeout: 15000, message: "account status strip did not report Registered" }
   );
-  await browser.close();
   console.log("UI smoke OK (connect toggle + account register outcomes)");
   process.exitCode = 0;
 } catch (err) {
   console.error("UI smoke FAIL", err);
   process.exitCode = 1;
 } finally {
+  // Without this the browser keeps the event loop alive and a failing run hangs
+  // instead of reporting.
+  await browser?.close().catch(() => {});
   child.kill("SIGTERM");
   setTimeout(() => {
     try {
