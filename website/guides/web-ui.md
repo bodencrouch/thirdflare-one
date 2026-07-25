@@ -11,7 +11,7 @@ thirdflare --no-open
 
 Or use `npm run dev` / `./thirdflare-one dev`.
 
-Open `http://127.0.0.1:3847`.
+Open `http://127.0.0.1:4173`.
 
 ## Embedded in tray
 

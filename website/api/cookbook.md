@@ -9,25 +9,25 @@ thirdflare --no-open
 ## Health & version
 
 ```bash
-curl -s http://127.0.0.1:3847/api/health | jq
-curl -s http://127.0.0.1:3847/api/version | jq
+curl -s http://127.0.0.1:4173/api/health | jq
+curl -s http://127.0.0.1:4173/api/version | jq
 ```
 
 ## Status snapshot
 
 ```bash
-curl -s http://127.0.0.1:3847/api/snapshot | jq '.status'
-curl -s http://127.0.0.1:3847/api/account | jq
+curl -s http://127.0.0.1:4173/api/snapshot | jq '.status'
+curl -s http://127.0.0.1:4173/api/account | jq
 ```
 
 ## Connect / disconnect
 
 ```bash
-curl -X POST http://127.0.0.1:3847/api/action \
+curl -X POST http://127.0.0.1:4173/api/action \
   -H 'Content-Type: application/json' \
   -d '{"action":"connect"}'
 
-curl -X POST http://127.0.0.1:3847/api/action \
+curl -X POST http://127.0.0.1:4173/api/action \
   -H 'Content-Type: application/json' \
   -d '{"action":"disconnect"}'
 ```
@@ -35,11 +35,11 @@ curl -X POST http://127.0.0.1:3847/api/action \
 ## Mode & protocol
 
 ```bash
-curl -X POST http://127.0.0.1:3847/api/action \
+curl -X POST http://127.0.0.1:4173/api/action \
   -H 'Content-Type: application/json' \
   -d '{"action":"setMode","value":"warp"}'
 
-curl -X POST http://127.0.0.1:3847/api/action \
+curl -X POST http://127.0.0.1:4173/api/action \
   -H 'Content-Type: application/json' \
   -d '{"action":"setProtocol","value":"MASQUE"}'
 ```
@@ -47,9 +47,9 @@ curl -X POST http://127.0.0.1:3847/api/action \
 ## Kill switch
 
 ```bash
-curl -s http://127.0.0.1:3847/api/killswitch | jq
+curl -s http://127.0.0.1:4173/api/killswitch | jq
 
-curl -X POST http://127.0.0.1:3847/api/killswitch \
+curl -X POST http://127.0.0.1:4173/api/killswitch \
   -H 'Content-Type: application/json' \
   -d '{"enabled":true,"allowLan":false}'
 ```
@@ -57,9 +57,9 @@ curl -X POST http://127.0.0.1:3847/api/killswitch \
 ## Config session override
 
 ```bash
-curl -s http://127.0.0.1:3847/api/config | jq
+curl -s http://127.0.0.1:4173/api/config | jq
 
-curl -X POST http://127.0.0.1:3847/api/config/session \
+curl -X POST http://127.0.0.1:4173/api/config/session \
   -H 'Content-Type: application/json' \
   -d '{"webui":{"enabled":true}}'
 ```
@@ -67,20 +67,20 @@ curl -X POST http://127.0.0.1:3847/api/config/session \
 ## Command log
 
 ```bash
-curl -s 'http://127.0.0.1:3847/api/logs?since=0' | jq '.entries[-5:]'
+curl -s 'http://127.0.0.1:4173/api/logs?since=0' | jq '.entries[-5:]'
 ```
 
 ## Live events (SSE)
 
 ```bash
-curl -N http://127.0.0.1:3847/api/events
+curl -N http://127.0.0.1:4173/api/events
 ```
 
 ## App routing shortcut
 
 ```bash
-curl -s http://127.0.0.1:3847/api/apps | jq
-curl -X POST http://127.0.0.1:3847/api/apps/proxy-launcher \
+curl -s http://127.0.0.1:4173/api/apps | jq
+curl -X POST http://127.0.0.1:4173/api/apps/proxy-launcher \
   -H 'Content-Type: application/json' \
   -d '{"appId":"firefox"}'
 ```
@@ -88,5 +88,5 @@ curl -X POST http://127.0.0.1:3847/api/apps/proxy-launcher \
 ## Updates
 
 ```bash
-curl -s http://127.0.0.1:3847/api/update/check | jq
+curl -s http://127.0.0.1:4173/api/update/check | jq
 ```

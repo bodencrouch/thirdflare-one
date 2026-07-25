@@ -5,9 +5,11 @@ ThirdFlare One exposes warp-cli split tunnel reads/actions via API and UI, plus 
 ## Split tunnel API
 
 ```bash
-curl -s http://127.0.0.1:3847/api/query/splitTunnelDump
-curl -s http://127.0.0.1:3847/api/query/splitTunnelIps
-curl -X POST http://127.0.0.1:3847/api/action/resetSplitIps
+curl -s http://127.0.0.1:4173/api/snapshot | jq '.commands.splitTunnelDump'
+curl -s http://127.0.0.1:4173/api/snapshot | jq '.commands.splitTunnelIps'
+curl -X POST http://127.0.0.1:4173/api/action \
+  -H 'Content-Type: application/json' \
+  -d '{"action":"resetSplitIps"}'
 ```
 
 Host/route lists follow warp-cli semantics.

@@ -37,7 +37,7 @@ On KDE Plasma / Wayland, left-click the tray icon opens the PyQt6 panel with the
 ```bash
 # Headless automation host
 thirdflare --no-open
-curl -s http://127.0.0.1:3847/api/status | jq
+curl -s http://127.0.0.1:4173/api/snapshot | jq '.status'
 
 # Quick connect from terminal
 thirdflare --connect

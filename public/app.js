@@ -96,6 +96,9 @@ const state = {
     selectedId: "",
     lastShortcut: null
   },
+  appRouting: {
+    pending: false
+  },
   ui: {
     openPanels: new Set()
   }
@@ -155,6 +158,15 @@ function proxyPortValue() {
   const fromSettings = setting("Proxy port", "proxy port");
   if (fromSettings && fromSettings !== "Unknown") return fromSettings;
   return "40000";
+}
+
+/** Local proxy / WarpProxy mode (warp-cli display string or normalized slug). */
+function isProxyMode() {
+  const mode = String(setting("Mode") || "");
+  const lower = mode.toLowerCase();
+  if (lower === "proxy") return true;
+  if (/^warpproxy\b/i.test(mode) || /\bproxy on port\b/i.test(mode)) return true;
+  return Boolean(state.appRouting?.pending);
 }
 
 async function copyText(label, text) {
@@ -312,10 +324,19 @@ function wireDetailsPanel(details, panelId) {
 function patchTunnelProxyGuide() {
   const panel = document.getElementById("tunnel-proxy-guide");
   if (!panel || state.view !== "tunnel") return;
-  const isProxy = setting("Mode").toLowerCase() === "proxy";
+  const isProxy = isProxyMode();
   const wasProxy = Boolean(panel.querySelector("[data-copy-proxy]"));
   if (isProxy === wasProxy) return;
   panel.replaceWith(tunnelProxyGuidePanel());
+}
+
+function patchAppRoutingPanel() {
+  const panel = document.getElementById("app-routing-guide");
+  if (!panel || state.view !== "split") return;
+  const isProxy = isProxyMode();
+  const hasPicker = Boolean(panel.querySelector("[data-testid='app-routing-select']"));
+  if (isProxy === hasPicker) return;
+  panel.replaceWith(appRoutingPanel());
 }
 
 function patchSilentRefresh() {
@@ -323,6 +344,7 @@ function patchSilentRefresh() {
   patchLogStatusTab(state);
   patchSnapshotPanels();
   patchTunnelProxyGuide();
+  patchAppRoutingPanel();
 }
 
 /** Update output pre blocks and metrics without rebuilding the shell. */
@@ -400,6 +422,9 @@ async function refresh({ silent = false, preserveError = false } = {}) {
     seedStatusFromSnapshot(state);
     if (state.view === "account") await loadAccount(false);
     if (state.view === "split") await loadDesktopApps(false);
+    if (String(state.snapshot?.settings?.Mode || "").toLowerCase() === "proxy") {
+      state.appRouting.pending = false;
+    }
     const killSwitchDesired = Boolean(state.appConfig?.warp?.killSwitch);
     if (state.view === "settings" || (state.view === "home" && killSwitchDesired)) {
       await loadKillSwitch(false);
@@ -499,10 +524,10 @@ function killSwitchPanel() {
   `;
   const toggle = el("button", `switch ${effectivelyOn ? "on" : ""}`);
   toggle.type = "button";
-  toggle.type = "button";
   toggle.setAttribute("role", "switch");
   toggle.setAttribute("aria-checked", effectivelyOn ? "true" : "false");
   toggle.setAttribute("aria-label", t("home.killSwitchLabel"));
+  toggle.setAttribute("data-testid", "killswitch-toggle");
   toggle.disabled = ks.loading || state.busy;
   toggle.onclick = () => setKillSwitch(!effectivelyOn, ks.allowLan);
   main.append(toggle);
@@ -517,10 +542,10 @@ function killSwitchPanel() {
   `;
   const lanToggle = el("button", `switch ${ks.allowLan ? "on" : ""}`);
   lanToggle.type = "button";
-  lanToggle.type = "button";
   lanToggle.setAttribute("role", "switch");
   lanToggle.setAttribute("aria-checked", ks.allowLan ? "true" : "false");
   lanToggle.setAttribute("aria-label", t("home.killSwitchAllowLan"));
+  lanToggle.setAttribute("data-testid", "killswitch-allow-lan");
   lanToggle.disabled = ks.loading || state.busy || !effectivelyOn;
   lanToggle.onclick = () => setKillSwitch(true, !ks.allowLan);
   lan.append(lanToggle);
@@ -573,7 +598,7 @@ async function createAppShortcut() {
     render();
     return;
   }
-  if (setting("Mode").toLowerCase() !== "proxy") {
+  if (!isProxyMode()) {
     state.error = t("appRouting.enableFirst");
     render();
     return;
@@ -641,8 +666,15 @@ async function enableLocalProxy() {
     state.lastAction = body.result || body;
     if (!response.ok) {
       state.error = body.error || body.result?.stderr || t("tunnelGuide.enableProxyFailed");
+      state.appRouting.pending = false;
     } else {
+      state.appRouting.pending = true;
+      if (body.settings && state.snapshot) {
+        state.snapshot.settings = { ...(state.snapshot.settings || {}), ...body.settings };
+      }
       state.toast = t("tunnelGuide.proxyEnabledToast");
+      state.pendingScrollId = "app-routing-guide";
+      await loadDesktopApps(true);
     }
   } catch (error) {
     state.error = error.message;
@@ -1112,7 +1144,10 @@ function segmented(label, values, actionName, current, tipText = "", valueTips =
   const tipAttr = tipText ? ` class="tip" data-tip="${escapeHtml(tipText)}" tabindex="0"` : "";
   wrap.innerHTML = `<label${tipAttr}>${label}</label>`;
   const row = el("div", "segmented");
-  if (settingKey) row.setAttribute("data-setting-key", settingKey);
+  if (settingKey) {
+    row.setAttribute("data-setting-key", settingKey);
+    row.setAttribute("data-testid", `segmented-${actionName}`);
+  }
   values.forEach((value) => {
     const button = el("button", current?.toLowerCase?.() === value.toLowerCase() ? "selected" : "", value);
     button.setAttribute("data-value", value);
@@ -1524,7 +1559,7 @@ function collapsedOutputPanel(title, result, tipKey, panelId = null, outputKey =
 }
 
 function appRoutingPanel() {
-  const isProxy = setting("Mode").toLowerCase() === "proxy";
+  const isProxy = isProxyMode();
   const panel = el("section", "panel guide-panel app-routing-panel");
   panel.id = "app-routing-guide";
   panel.innerHTML = `
@@ -1537,8 +1572,8 @@ function appRoutingPanel() {
 
   const steps = el("ol", "routing-steps");
   steps.innerHTML = `
-    <li>${t("appRouting.stepEnable")}</li>
-    <li>${t("appRouting.stepPick")}</li>
+    <li class="${isProxy ? "done" : ""}">${t("appRouting.stepEnable")}</li>
+    <li class="${isProxy ? "active" : ""}">${t("appRouting.stepPick")}</li>
     <li>${t("appRouting.stepLaunch")}</li>
   `;
   panel.append(steps);
@@ -1548,6 +1583,7 @@ function appRoutingPanel() {
     const enableBtn = el("button", "primary", t("appRouting.enableRouting"));
     enableBtn.type = "button";
     enableBtn.disabled = state.busy;
+    enableBtn.setAttribute("data-testid", "app-routing-enable");
     enableBtn.onclick = () => enableLocalProxy();
     actions.append(enableBtn);
   } else {
@@ -1555,6 +1591,7 @@ function appRoutingPanel() {
     const pickRow = el("div", "field-row app-routing-pick");
     pickRow.innerHTML = `<label>${t("appRouting.pickApp")}</label>`;
     const select = el("select", "app-routing-select");
+    select.setAttribute("data-testid", "app-routing-select");
     select.disabled = state.busy || state.desktopApps.loading;
     if (state.desktopApps.loading) {
       select.append(el("option", "", t("appRouting.loadingApps")));
@@ -1575,6 +1612,7 @@ function appRoutingPanel() {
     actions.append(pickRow);
     const shortcutBtn = el("button", "secondary", t("appRouting.createShortcut"));
     shortcutBtn.type = "button";
+    shortcutBtn.setAttribute("data-testid", "app-routing-shortcut");
     shortcutBtn.disabled = state.busy || state.desktopApps.loading || !state.desktopApps.list.length;
     shortcutBtn.onclick = () => createAppShortcut();
     actions.append(shortcutBtn);
@@ -1622,7 +1660,7 @@ function splitRoutingGuidePanel() {
       t("splitGuide.scenario3Step3")
     ],
     note: t("splitGuide.scenario3Example"),
-    active: setting("Mode").toLowerCase() === "proxy"
+    active: isProxyMode()
   }));
 
   const wrap = el("section", "panel guide-panel routing-guide-panel");
@@ -1639,8 +1677,7 @@ function splitRoutingGuidePanel() {
 }
 
 function tunnelProxyGuidePanel() {
-  const mode = setting("Mode").toLowerCase();
-  const isProxy = mode === "proxy";
+  const isProxy = isProxyMode();
   const port = proxyPortValue();
   const proxyUrl = `127.0.0.1:${port}`;
   const panel = el("section", "panel guide-panel tunnel-proxy-panel");
@@ -1675,7 +1712,7 @@ function tunnelProxyGuidePanel() {
       <span>guide</span>
     </div>
     <p>${t("tunnelGuide.proxyTeaserSummary")}</p>
-    <button type="button" class="secondary" data-enable-proxy>${t("tunnelGuide.enableProxyMode")}</button>
+    <button type="button" class="secondary" data-enable-proxy data-testid="tunnel-enable-proxy">${t("tunnelGuide.enableProxyMode")}</button>
   `;
   panel.querySelector("[data-enable-proxy]").onclick = () => enableLocalProxy();
   return panel;

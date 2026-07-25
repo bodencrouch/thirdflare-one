@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Documentation
+
+- Publish VitePress docs to GitHub Pages (install, CLI, API, guides, packaging)
+- Rewrite docs homepage hero: plain-language copy, correct default port (4173), simple vs expert UI, opt-in kill switch
+- Refresh docs hero for app routing, WARP internals page, and 0.2.7 capability map
+- Fix docs site port drift (4173) and snapshot paths for split tunnel examples
+- Add docs/WARP_INTERNALS.md (warp-cli modes, warp-docker reference)
+- Add UI controls smoke test for expert-mode toggles, segmented controls, and app routing picker
+
 ### Features
 
 - Linux native shell: PyQt6 tray + embedded Web UI with Cloudflare One Client–style simple layout (`/?shell=1`) and expert-mode toggle
@@ -14,12 +23,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Polkit-scoped kill switch: `thirdflare-nft-apply` helper + `com.thirdflare.one.policy`; GET `/api/killswitch` stays unprivileged
 - Opt-in tray autostart (`tray.autostart` config + `POST /api/config/tray-autostart`)
 - Always On (Linux) UX: kill switch labeled as Windows Always On equivalent in UI and docs
+- Recognize warp-cli `WarpProxy on port …` Mode string for app routing UI (see docs/WARP_INTERNALS.md)
 - Split tunnel in-app guide (IP/domain routing vs per-app limitations)
 - Scenario-driven routing UX: Split Tunnel status banner, three setup cards (Exclude / Include / Local proxy), removable route lists, Tunnel proxy guide, and simple Connectivity entry point
 - Structured `splitTunnel` snapshot from `lib/warp/split-tunnel.mjs` for live mode and route counts
 
 ### Bug Fixes
 
+- App routing: recognize real warp-cli Mode string `WarpProxy on port 40000` so the app picker appears after enabling local proxy
 - KDE launcher: single app menu entry launches native PyQt6 tray (not Firefox); removed Desktop Actions that Plasma indexed as duplicates
 - Stale daemon detection: restart API server after install or when `apiRevision`/version mismatch (fixes “Unknown API route” on Settings toggles)
 

@@ -52,7 +52,7 @@ Applying nftables rules needs elevation. If pkexec fails, run from a polkit-enab
 
 ## OpenAPI / port confusion
 
-Example config uses port **4173**; launcher may use **3847**. Read `/api/config` for effective values.
+Example config and launcher both default to port **4173**. Read `/api/config` if health checks fail — the daemon may have taken the next free port.
 
 ## Tests
 

@@ -28,7 +28,7 @@ npm run dev
 ```ini
 [Service]
 Environment=THIRDFLARE_WEBUI=0
-Environment=THIRDFLARE_PORT=3847
+Environment=THIRDFLARE_PORT=4173
 ```
 
 ## Config file paths

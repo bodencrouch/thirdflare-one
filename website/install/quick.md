@@ -24,7 +24,7 @@ npm run dev          # THIRDFLARE_WEBUI=1, hot daemon from repo root
 ./bin/thirdflare --no-open
 ```
 
-Open `http://127.0.0.1:3847` when Web UI is enabled.
+Open `http://127.0.0.1:4173` when Web UI is enabled.
 
 ## Reinstall / purge
 

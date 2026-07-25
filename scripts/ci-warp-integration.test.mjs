@@ -213,7 +213,12 @@ test("every mode value sticks in settings", async () => {
     const res = await action("setMode", mode);
     assert.equal(res.status, 200, `setMode ${mode}`);
     const snap = await httpJson("GET", "/api/snapshot");
-    assert.match(snap.json.commands.settings.stdout, new RegExp(`Mode:\\s*${mode.replace("+", "\\+")}`));
+    assert.equal(snap.json.settings.Mode, mode, `normalized Mode for ${mode}`);
+    if (mode === "proxy") {
+      assert.match(snap.json.commands.settings.stdout, /Mode:\s*WarpProxy on port/i);
+    } else {
+      assert.match(snap.json.commands.settings.stdout, new RegExp(`Mode:\\s*${mode.replace("+", "\\+")}`));
+    }
   }
 });
 

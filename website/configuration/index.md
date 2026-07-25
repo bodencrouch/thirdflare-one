@@ -27,7 +27,7 @@ See [`config/config.example.json`](https://github.com/bodencrouch/thirdflare-one
 ## Inspect effective config
 
 ```bash
-curl -s http://127.0.0.1:3847/api/config | jq
+curl -s http://127.0.0.1:4173/api/config | jq
 ```
 
 Returns merged `config` plus `sources` showing which layer set each key.
@@ -37,7 +37,7 @@ Returns merged `config` plus `sources` showing which layer set each key.
 Use for in-app Settings changes without editing files:
 
 ```bash
-curl -X POST http://127.0.0.1:3847/api/config/session \
+curl -X POST http://127.0.0.1:4173/api/config/session \
   -H 'Content-Type: application/json' \
   -d '{"ui":{"theme":"dark"}}'
 ```
