@@ -16,6 +16,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fail the release build when an AppImage would ship without its `.sig` sidecar
 - Run the daemon service with `ProtectSystem=strict` and a narrow set of writable paths, restricted socket families, and no namespace, realtime, or SUID access
 
+### Added
+
+- Shared readiness answer (`GET /api/readiness`, also embedded in `/api/snapshot`) so tray, Web UI, and launcher agree on hard blockers vs soft warnings
+- Clipboard diagnostics (`GET /api/diagnostics` + Copy diagnostics on Home)
+- Tray icons that distinguish connected, connecting, disconnected, and needs-attention
+- Always On kill-switch UI modes: Off, Always On, and Paused (enrollment)
+
 ### Documentation
 
 - Publish VitePress docs to GitHub Pages (install, CLI, API, guides, packaging)

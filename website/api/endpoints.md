@@ -4,6 +4,8 @@
 |--------|------|-------------|
 | GET | `/api/session` | Session credential for local clients |
 | GET | `/api/health` | Liveness (`ok`, `app`, `version`) |
+| GET | `/api/readiness` | Shared readiness truth (hard blockers vs soft warnings) |
+| GET | `/api/diagnostics` | Clipboard-ready diagnostics text (no account secrets) |
 | GET | `/api/version` | Installed version + update source |
 | GET | `/api/account` | Structured registration / devices |
 | GET | `/api/snapshot` | Aggregated warp-cli reads (see keys below) |

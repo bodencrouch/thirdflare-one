@@ -71,6 +71,7 @@ import {
   getCommandLogCapacity,
   listEntries
 } from "./lib/warp/command-log.mjs";
+import { assessReadiness, formatDiagnosticsClipboard } from "./lib/readiness/index.mjs";
 
 const root = fileURLToPath(new URL(".", import.meta.url));
 const publicRoot = join(root, "public");
@@ -331,6 +332,18 @@ function daemonError(result) {
     || combined.includes("operation not permitted");
 }
 
+async function buildReadiness(statusResult = null) {
+  const active = getConfig();
+  return assessReadiness({
+    warpCliPath: warpCliCommand(),
+    runStatus: async () => statusResult || runWarp(["status"]),
+    probeKillSwitch: () => probeKillSwitchActive(),
+    getEnrollmentPause: () => getEnrollmentPauseState(),
+    killSwitchDesired: Boolean(active.warp?.killSwitch),
+    killSwitchAllowLan: Boolean(active.warp?.killSwitchAllowLan)
+  });
+}
+
 async function snapshot() {
   const entries = await Promise.all(
     Object.entries(COMMANDS).map(async ([key, args]) => [key, await runWarp(args)])
@@ -346,11 +359,13 @@ async function snapshot() {
       ? (commands.status.stderr || commands.status.stdout)
       : "CloudflareWARP daemon responded."
   };
+  const readiness = await buildReadiness(commands.status);
 
   return {
     generatedAt: new Date().toISOString(),
     daemon,
     status,
+    readiness,
     settings,
     splitTunnel: enrichSplitTunnel({
       dump: commands.splitTunnelDump,
@@ -517,6 +532,29 @@ async function handleApi(req, res, url) {
         effectivePort: Number(active.server?.port || port),
         generatedAt: new Date().toISOString()
       });
+      return;
+    }
+
+    if (req.method === "GET" && url.pathname === "/api/readiness") {
+      const readiness = await buildReadiness();
+      json(res, 200, { ok: true, ...readiness });
+      return;
+    }
+
+    if (req.method === "GET" && url.pathname === "/api/diagnostics") {
+      const readiness = await buildReadiness();
+      const entries = listEntries();
+      const logLines = entries.map((entry) => {
+        const err = entry.ok ? "" : ` exit=${entry.code ?? "?"}`;
+        return `${entry.ts || ""} ${entry.command || "warp-cli"}${err}`.trim();
+      });
+      const text = formatDiagnosticsClipboard({
+        readiness,
+        version: getVersion(),
+        installFormat: detectInstallFormat(),
+        logs: logLines
+      });
+      json(res, 200, { ok: true, text, readiness });
       return;
     }
 
@@ -1045,7 +1083,8 @@ createServer(async (req, res) => {
   const notifyWatcher = startStatusWatcher({
     statusListener: getStatusListener(),
     enabled: getConfig().ui?.notifications !== false,
-    env: process.env
+    env: process.env,
+    getKillSwitchDesired: () => Boolean(getConfig().warp?.killSwitch)
   });
   if (notifyWatcher.started) {
     console.log("Desktop notifications enabled (ui.notifications).");

@@ -147,12 +147,35 @@ test("/api/snapshot reports warp daemon and network debug", async () => {
   assert.equal(res.status, 200);
   assert.equal(res.json.daemon.available, true);
   assert.equal(res.json.status.disconnected, true);
+  assert.equal(typeof res.json.readiness, "object");
+  assert.equal(res.json.readiness.hardBlocked, false);
+  assert.ok(Array.isArray(res.json.readiness.items));
   assert.match(res.json.commands.network.stdout, /DNS servers:/);
   assert.match(res.json.commands.network.stdout, /1\.1\.1\.1/);
   assert.equal(typeof res.json.splitTunnel, "object");
   assert.equal(res.json.splitTunnel.mode, "exclude");
   assert.ok(Array.isArray(res.json.splitTunnel.ips));
   assert.ok(Array.isArray(res.json.splitTunnel.hosts));
+});
+
+test("GET /api/readiness reports items and kill-switch mode", async () => {
+  const res = await httpJson("GET", "/api/readiness");
+  assert.equal(res.status, 200);
+  assert.equal(res.json.ok, true);
+  assert.equal(typeof res.json.hardBlocked, "boolean");
+  assert.ok(["off", "always_on", "paused"].includes(res.json.killSwitchMode));
+  assert.ok(res.json.items.some((item) => item.id === "warp_cli"));
+});
+
+test("GET /api/diagnostics returns clipboard text without account fields", async () => {
+  const res = await httpJson("GET", "/api/diagnostics");
+  assert.equal(res.status, 200);
+  assert.equal(res.json.ok, true);
+  assert.match(res.json.text, /ThirdFlare One diagnostics/);
+  // Command names may say "registration organization"; account values must not appear.
+  assert.doesNotMatch(res.json.text, /Organization:\s+\S+/i);
+  assert.doesNotMatch(res.json.text, /License:\s+\S+/i);
+  assert.doesNotMatch(res.json.text, /Account ID:\s+\S+/i);
 });
 
 test("connect then disconnect updates snapshot status", async () => {

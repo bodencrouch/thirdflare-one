@@ -225,32 +225,55 @@ function setting(...keys) {
   return "Unknown";
 }
 
+function readinessReport() {
+  return state.snapshot?.readiness || null;
+}
+
+function readinessHardBlocked() {
+  const readiness = readinessReport();
+  if (readiness) return Boolean(readiness.hardBlocked);
+  return state.snapshot?.daemon?.available === false;
+}
+
+function readinessAttentionItems() {
+  const readiness = readinessReport();
+  if (!readiness?.items) return [];
+  return readiness.items.filter((item) => item.state !== "ready");
+}
+
 function statusKind() {
+  const readiness = readinessReport();
+  if (readiness?.hardBlocked) return "bad";
+  if (readiness?.softWarnings) return "warn";
   if (!state.snapshot?.daemon?.available) return "bad";
   return state.snapshot.status?.severity || "warn";
 }
 
 function statusText() {
   if (!state.snapshot) return "Loading WARP state";
+  const blockers = readinessAttentionItems().filter((item) => item.hardBlocker);
+  if (blockers.length) return blockers[0].title;
   if (!state.snapshot.daemon.available) return "Daemon unavailable";
   return state.snapshot.status.label || "State unavailable";
 }
 
 /** Single Connect/Disconnect control driven by live WARP status. */
 function connectionToggle() {
-  const daemonOk = state.snapshot?.daemon?.available !== false;
+  const hardBlocked = readinessHardBlocked();
   const status = state.snapshot?.status;
   const connected = Boolean(status?.connected);
   const connecting = Boolean(status?.connecting);
+  const blocker = readinessAttentionItems().find((item) => item.hardBlocker);
 
-  if (!daemonOk) {
+  if (hardBlocked) {
     return {
       action: null,
       label: t("common.connect"),
       tipKey: "daemon",
       className: "primary tip connection-toggle",
       disabled: true,
-      pressed: false
+      pressed: false,
+      reason: blocker?.nextStep || t("home.readinessBlocked")
     };
   }
   if (connected || connecting) {
@@ -518,21 +541,31 @@ async function setKillSwitch(enabled, allowLan = state.killswitch.allowLan) {
   else patchSilentRefresh();
 }
 
+function killSwitchMode() {
+  const ks = state.killswitch;
+  if (ks.enrollmentPaused) return "paused";
+  if (ks.desired || ks.active) return "always_on";
+  return "off";
+}
+
 function killSwitchPanel() {
   const ks = state.killswitch;
   const panel = el("section", "panel killswitch-panel");
   // Treat orphan active (desired off, table on) as on so the toggle can disable.
   const effectivelyOn = Boolean(ks.active) || (Boolean(ks.desired) && !ks.enrollmentPaused);
   const mismatch = Boolean(ks.active) !== Boolean(ks.desired) || Boolean(ks.probeError);
-  const badge = ks.enrollmentPaused
-    ? t("home.killSwitchPaused")
-    : ks.probeError
-      ? t("home.killSwitchUnknown")
-      : (ks.active ? t("home.killSwitchOn") : t("home.killSwitchOff"));
+  const mode = killSwitchMode();
+  const badge = mode === "paused"
+    ? t("home.killSwitchModePaused")
+    : mode === "always_on"
+      ? t("home.killSwitchModeAlwaysOn")
+      : ks.probeError
+        ? t("home.killSwitchUnknown")
+        : t("home.killSwitchModeOff");
   panel.innerHTML = `
     <div class="panel-heading">
       <h3${tipMarkup("killSwitch")}>${t("home.killSwitch")}</h3>
-      <span>${badge}</span>
+      <span data-testid="killswitch-mode">${badge}</span>
     </div>
     <p class="panel-lede tip" data-tip="${escapeHtml(tip("killSwitch"))}" tabindex="0">${t("home.killSwitchCopy")}</p>
   `;
@@ -542,9 +575,11 @@ function killSwitchPanel() {
     <div class="switch-meta">
       <strong class="tip" data-tip="${escapeHtml(tip("killSwitch"))}" tabindex="0">${t("home.killSwitchLabel")}</strong>
       <p>${escapeHtml(
-        ks.enrollmentPaused
+        mode === "paused"
           ? t("home.killSwitchPausedHint")
-          : (ks.detail || (mismatch ? t("home.killSwitchMismatch") : t("home.killSwitchHint")))
+          : mode === "always_on"
+            ? (ks.detail || t("home.killSwitchRestoreHint"))
+            : (ks.detail || (mismatch ? t("home.killSwitchMismatch") : t("home.killSwitchHint")))
       )}</p>
     </div>
   `;
@@ -1135,25 +1170,65 @@ function pageTitle(title, copy, tipKey = "") {
   return el("div", "page-title", `<h1${tipMarkup(tipKey)}>${title}</h1><p>${copy}</p>`);
 }
 
+function readinessBanner() {
+  const items = readinessAttentionItems();
+  if (!items.length) return null;
+  const panel = el("section", "panel readiness-panel");
+  panel.setAttribute("data-testid", "readiness-banner");
+  const hard = items.some((item) => item.hardBlocker);
+  panel.innerHTML = `
+    <div class="panel-heading">
+      <h3>${hard ? t("home.readinessBlockedTitle") : t("home.readinessAttentionTitle")}</h3>
+      <span>${hard ? t("home.readinessBlockedBadge") : t("home.readinessAttentionBadge")}</span>
+    </div>
+    <ul class="readiness-list"></ul>
+  `;
+  const list = panel.querySelector(".readiness-list");
+  items.forEach((item) => {
+    const li = document.createElement("li");
+    li.innerHTML = `<strong>${escapeHtml(item.title)}</strong> — ${escapeHtml(item.nextStep || item.detail || "")}`;
+    list.append(li);
+  });
+  return panel;
+}
+
+async function copyDiagnostics() {
+  try {
+    const response = await apiFetch("/api/diagnostics");
+    const body = await response.json();
+    if (!response.ok || !body.text) throw new Error(body.error || "Diagnostics unavailable");
+    await copyText(t("home.diagnosticsCopied"), body.text);
+  } catch (error) {
+    state.error = error.message;
+    render();
+  }
+}
+
 function homeView() {
   const grid = el("div", "view-stack");
   grid.append(pageTitle(t("home.title"), t("home.copy"), "pageHome"));
 
   const layout = el("div", "home-grid");
   const primary = el("section", "hero-panel panel");
+  const toggle = connectionToggle();
+  const heroMessage = toggle.reason
+    || state.snapshot?.daemon?.message
+    || t("common.loading");
   primary.innerHTML = `
     <div class="status-orb ${statusKind()}"><span></span></div>
     <div class="hero-copy">
       <div class="status-label tip" data-tip="${escapeHtml(tip("liveStatus"))}" tabindex="0">${statusText()}</div>
-      <h2 class="tip" data-tip="${escapeHtml(tip("daemon"))}" tabindex="0">${state.snapshot?.daemon?.available ? t("home.tunnelControls") : t("home.daemonMissing")}</h2>
-      <p>${state.snapshot?.daemon?.message || t("common.loading")}</p>
+      <h2 class="tip" data-tip="${escapeHtml(tip("daemon"))}" tabindex="0">${readinessHardBlocked() ? t("home.daemonMissing") : t("home.tunnelControls")}</h2>
+      <p>${escapeHtml(heroMessage)}</p>
     </div>
     <div class="hero-actions">
       <button type="button" class="connection-toggle" data-connection-toggle data-testid="connection-toggle" tabindex="0"></button>
+      <button type="button" class="secondary" data-copy-diagnostics data-testid="copy-diagnostics">${t("home.copyDiagnostics")}</button>
     </div>
   `;
   const toggleBtn = primary.querySelector("[data-connection-toggle]");
   wireConnectionToggle(toggleBtn);
+  primary.querySelector("[data-copy-diagnostics]").onclick = () => copyDiagnostics();
   const quick = el("section", "panel quick-panel");
   quick.innerHTML = `<div class="panel-heading"><h3${tipMarkup("mode")}>${t("home.quickSettings")}</h3><span>${t("home.quickHint")}</span></div>`;
   quick.append(segmented(t("home.mode"), quickModes, "setMode", setting("Mode"), tip("mode"), modeValueTips, "Mode"));
@@ -1161,6 +1236,8 @@ function homeView() {
   quick.append(segmented(t("home.families"), families, "setFamilies", setting("Families mode", "DNS families"), tip("families"), familiesValueTips, "Families mode|DNS families"));
 
   layout.append(primary, quick);
+  const banner = readinessBanner();
+  if (banner) grid.append(banner);
   grid.append(layout, killSwitchPanel(), metrics(), liveStatePanel(), outputPanel("Last command", state.lastAction, "rawOutput", "lastAction"));
   return grid;
 }
