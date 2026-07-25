@@ -171,7 +171,7 @@ def run_tray_app(show_window_on_start: bool = False) -> int:
   class NativeShellWindow(QMainWindow):
     """Native KDE window embedding the full ThirdFlare One Web UI."""
 
-    def __init__(self, tray_icon: QSystemTrayIcon) -> None:
+    def __init__(self, tray_icon: QSystemTrayIcon, on_open_settings) -> None:
       super().__init__()
       self._tray = tray_icon
       self._loaded = False
@@ -182,6 +182,22 @@ def run_tray_app(show_window_on_start: bool = False) -> int:
       self._view = QWebEngineView(self)
       self.setCentralWidget(self._view)
 
+      from PyQt6.QtCore import QObject, pyqtSlot
+      from PyQt6.QtWebChannel import QWebChannel
+
+      class ShellBridge(QObject):
+        def __init__(self, open_settings) -> None:
+          super().__init__()
+          self._open_settings = open_settings
+
+        @pyqtSlot()
+        def openSettings(self) -> None:
+          self._open_settings()
+
+      channel = QWebChannel(self)
+      channel.registerObject("thirdflare", ShellBridge(on_open_settings))
+      self._view.page().setWebChannel(channel)
+
     def closeEvent(self, event: QCloseEvent) -> None:  # noqa: N802
       event.ignore()
       self.hide()
@@ -190,7 +206,7 @@ def run_tray_app(show_window_on_start: bool = False) -> int:
       if not client.base_url and not client.discover():
         ensure_daemon(launcher)
         client.discover()
-      client.ensure_webui(launcher)
+      client.ensure_daemon_webui(launcher)
       target = QUrl(client.app_url())
       if force_reload or not self._loaded:
         self._view.setUrl(target)
@@ -205,7 +221,16 @@ def run_tray_app(show_window_on_start: bool = False) -> int:
   tray = QSystemTrayIcon(QIcon(icon_path))
   tray.setToolTip(tray_tooltip(status_text(launcher)))
 
-  window = NativeShellWindow(tray)
+  def show_settings() -> None:
+    script = os.path.join(root, "scripts", "tray-settings.py")
+    subprocess.Popen(
+      [sys.executable, script, "--tray-active"],
+      stdout=subprocess.DEVNULL,
+      stderr=subprocess.DEVNULL,
+      start_new_session=True,
+    )
+
+  window = NativeShellWindow(tray, show_settings)
 
   def show_window(force_reload: bool = False) -> None:
     window.load_app(force_reload=force_reload)
@@ -256,6 +281,7 @@ def run_tray_app(show_window_on_start: bool = False) -> int:
   menu.addAction(connection_action)
   menu.aboutToShow.connect(refresh_connection_action)
   menu.addSeparator()
+  menu.addAction("Settings…", show_settings)
   menu.addAction("Reload window", lambda: show_window(force_reload=True))
   menu.addAction("Show status notification", lambda: notify_status(root, launcher))
   menu.addSeparator()
@@ -299,6 +325,11 @@ def main() -> int:
     root = app_dir()
     notify_status(root, launcher_path())
     return 0
+  if args and args[0] == "--settings":
+    script = os.path.join(app_dir(), "scripts", "tray-settings.py")
+    tray_active = "--tray-active" in args or os.environ.get("THIRDFLARE_TRAY_ACTIVE") == "1"
+    extra = ["--tray-active"] if tray_active else []
+    return subprocess.call([sys.executable, script, *extra])
   show_window = "--panel" in args or os.environ.get("THIRDFLARE_SHOW_PANEL") == "1"
   return run_tray_app(show_window_on_start=show_window)
 

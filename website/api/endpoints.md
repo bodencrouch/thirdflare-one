@@ -9,6 +9,9 @@
 | GET | `/api/config` | Effective layered config + sources |
 | POST | `/api/config/session` | Session overrides (until daemon restart) |
 | POST | `/api/config/tray-autostart` | Tray autostart preference |
+| POST | `/api/config/webui` | Persist Web UI enablement (restart required) |
+| POST | `/api/config/server` | Persist HTTP port/bind (restart required) |
+| POST | `/api/config/ui` | Persist UI preferences (notifications) |
 | GET | `/api/killswitch` | Kill switch desired/active state |
 | POST | `/api/killswitch` | Enable/disable kill switch |
 | POST | `/api/killswitch/enrollment-pause` | Pause KS during enrollment |

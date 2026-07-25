@@ -19,6 +19,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Features
 
 - Linux native shell: PyQt6 tray + embedded Web UI with Cloudflare One Client–style simple layout (`/?shell=1`) and expert-mode toggle
+- Native PyQt6 system settings (`thirdflare-one-tray --settings`) for Web UI enable, HTTP port, tray autostart, and notifications
+- Web UI startup modes: API-only by default (`--no-open`, systemd); `--daemon` serves full static UI with no runtime disable toggle
+- Persist Web UI and server settings via `POST /api/config/webui`, `POST /api/config/server`, and `POST /api/config/ui`
 - First-class tray packaging: stage tray Python modules, `/usr/bin/thirdflare-one-tray`, PyQt6 recommends in deb/rpm/Fedora spec
 - Polkit-scoped kill switch: `thirdflare-nft-apply` helper + `com.thirdflare.one.policy`; GET `/api/killswitch` stays unprivileged
 - Opt-in tray autostart (`tray.autostart` config + `POST /api/config/tray-autostart`)
@@ -30,6 +33,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Bug Fixes
 
+- Share one `warp-cli --listen status` process per daemon (SSE + notifications); fixes leaked listener processes on UI reconnect
+- Web UI: eliminate half-enabled 503 state; tray starts `--daemon` with full static serving; KDE Settings desktop entry
 - App routing: recognize real warp-cli Mode string `WarpProxy on port 40000` so the app picker appears after enabling local proxy
 - KDE launcher: single app menu entry launches native PyQt6 tray (not Firefox); removed Desktop Actions that Plasma indexed as duplicates
 - Stale daemon detection: restart API server after install or when `apiRevision`/version mismatch (fixes “Unknown API route” on Settings toggles)

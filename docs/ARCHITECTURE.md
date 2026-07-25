@@ -44,7 +44,7 @@ flowchart LR
 
 ## Desktop notifications
 
-When `ui.notifications` is true (default), `server.js` starts `lib/notify/status-watcher.mjs` on listen — independent of the Web UI or SSE clients. The watcher runs `warp-cli --listen status`, shares `parseStatus` from `lib/warp/status.mjs`, and calls `notify-send` (libnotify) only on meaningful transitions (connect / disconnect / daemon lost / unhealthy), debounced ~1.5s. Requires `notify-send` on `PATH`; disable with `ui.notifications: false` or `THIRDFLARE_DISABLE_NOTIFICATIONS=1`.
+When `ui.notifications` is true (default), `server.js` starts `lib/notify/status-watcher.mjs` on listen — independent of the Web UI or SSE clients. The watcher subscribes to a **single shared** `warp-cli --listen status` child (`lib/warp/status-listener.mjs`) alongside `/api/events` SSE clients, so reconnecting the UI does not spawn a new listener per tab. The watcher calls `notify-send` (libnotify) only on meaningful transitions (connect / disconnect / daemon lost / unhealthy), debounced ~1.5s. Requires `notify-send` on `PATH`; disable with `ui.notifications: false` or `THIRDFLARE_DISABLE_NOTIFICATIONS=1`.
 
 ## API surface
 
@@ -60,6 +60,9 @@ When `ui.notifications` is true (default), `server.js` starts `lib/notify/status
 | `/api/events` | GET | SSE stream from `warp-cli --listen status` |
 | `/api/action` | POST | Whitelisted mutations (`connect`, `setMode`, …) |
 | `/api/config/tray-autostart` | POST | Persist tray XDG autostart preference (Linux) |
+| `/api/config/webui` | POST | Persist `webui.enabled` / `allowRemote` (restart required) |
+| `/api/config/server` | POST | Persist `server.port` / `bind` (restart required) |
+| `/api/config/ui` | POST | Persist `ui.notifications` |
 | `/api/killswitch` | GET/POST | nftables kill-switch desired/active (Linux) |
 | `/api/killswitch/enrollment-pause` | POST | Pause/resume KS around Zero Trust enrollment |
 | `/api/update/check` | GET | Channel/manifest/GitHub update check |

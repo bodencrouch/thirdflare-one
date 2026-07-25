@@ -61,6 +61,8 @@ mkdir -p "${LIB}/scripts" "${LIB}/bin"
 install -m 0755 "${ROOT}/scripts/health-check.mjs" "${LIB}/scripts/health-check.mjs"
 install -m 0755 "${ROOT}/scripts/port-open.mjs" "${LIB}/scripts/port-open.mjs"
 install -m 0755 "${ROOT}/scripts/thirdflare-nft-apply" "${LIB}/scripts/thirdflare-nft-apply"
+install -m 0755 "${ROOT}/scripts/health-webui-check.mjs" "${LIB}/scripts/health-webui-check.mjs"
+install -m 0755 "${ROOT}/scripts/tray-settings.py" "${LIB}/scripts/tray-settings.py"
 install -m 0755 "${ROOT}/scripts/tray-qt.py" "${LIB}/scripts/tray-qt.py"
 install -m 0755 "${ROOT}/scripts/tray-sni.py" "${LIB}/scripts/tray-sni.py"
 install -m 0755 "${ROOT}/scripts/tray_api.py" "${LIB}/scripts/tray_api.py"
@@ -86,6 +88,8 @@ install -m 0644 "${ROOT}/assets/thirdflare.svg" \
   "${PAYLOAD}/usr/share/icons/hicolor/scalable/apps/thirdflare.svg"
 install -m 0644 "${ROOT}/packaging/thirdflare-one-tray.desktop" \
   "${PAYLOAD}/usr/share/applications/thirdflare-one-tray.desktop"
+install -m 0644 "${ROOT}/packaging/thirdflare-one-settings.desktop" \
+  "${PAYLOAD}/usr/share/applications/thirdflare-one-settings.desktop"
 install -m 0644 "${ROOT}/packaging/thirdflare-one.service" \
   "${PAYLOAD}/usr/lib/systemd/user/thirdflare-one.service"
 

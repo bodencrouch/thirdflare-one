@@ -21,7 +21,9 @@
                   "properties": {
                     "ok": { "type": "boolean" },
                     "app": { "type": "string", "enum": ["thirdflare"] },
-                    "version": { "type": "string" }
+                    "version": { "type": "string" },
+                    "webuiEnabled": { "type": "boolean" },
+                    "effectivePort": { "type": "integer" }
                   }
                 }
               }

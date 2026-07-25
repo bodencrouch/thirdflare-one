@@ -370,6 +370,41 @@ test("GET /api/killswitch includes enrollmentPause object", async () => {
   assert.equal(typeof res.json.enrollmentPause.paused, "boolean");
 });
 
+test("GET /api/health reports webuiEnabled and effectivePort", async () => {
+  const res = await httpJson("GET", "/api/health");
+  assert.equal(res.status, 200);
+  assert.equal(res.json.webuiEnabled, true);
+  assert.equal(typeof res.json.effectivePort, "number");
+});
+
+test("POST /api/config/webui and /api/config/server validate input", async () => {
+  const badWebui = await httpJson("POST", "/api/config/webui", { enabled: "yes" });
+  assert.equal(badWebui.status, 400);
+
+  const enable = await httpJson("POST", "/api/config/webui", { enabled: true });
+  assert.equal(enable.status, 200);
+  assert.equal(enable.json.config?.webui?.enabled, true);
+  assert.equal(enable.json.restartRequired, true);
+
+  const badPort = await httpJson("POST", "/api/config/server", { port: 80 });
+  assert.equal(badPort.status, 400);
+
+  const okPort = await httpJson("POST", "/api/config/server", { port: 4173 });
+  assert.equal(okPort.status, 200);
+  assert.equal(okPort.json.restartRequired, true);
+  assert.ok(okPort.json.config?.server?.port);
+});
+
+test("POST /api/config/session ignores webui.enabled", async () => {
+  const before = await httpJson("GET", "/api/health");
+  const session = await httpJson("POST", "/api/config/session", {
+    config: { webui: { enabled: false } }
+  });
+  assert.equal(session.status, 200);
+  const after = await httpJson("GET", "/api/health");
+  assert.equal(after.json.webuiEnabled, before.json.webuiEnabled);
+});
+
 test("POST /api/config/tray-autostart persists and syncs desktop entry", async () => {
   const bad = await httpJson("POST", "/api/config/tray-autostart", { autostart: "yes" });
   assert.equal(bad.status, 400);
