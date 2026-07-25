@@ -5,7 +5,9 @@ import {
   deriveDnsLogging,
   deriveLocalNetworkAccess,
   deriveMasqueOption,
+  deriveProxyPort,
   enrichSettings,
+  isProxyOperatingMode,
   normalizeOperatingMode,
   parseSettings
 } from "../lib/warp/settings.mjs";
@@ -75,6 +77,7 @@ test("normalizeOperatingMode maps warp-cli display strings to UI slugs", () => {
   assert.equal(normalizeOperatingMode("DnsOverTls"), "dot");
   assert.equal(normalizeOperatingMode("Proxy"), "proxy");
   assert.equal(normalizeOperatingMode("LocalProxy"), "proxy");
+  assert.equal(normalizeOperatingMode("WarpProxy on port 40000"), "proxy");
   assert.equal(normalizeOperatingMode("TunnelOnly"), "tunnel_only");
   assert.equal(normalizeOperatingMode("proxy"), "proxy");
   assert.equal(normalizeOperatingMode("WARP"), "warp");
@@ -85,4 +88,14 @@ test("enrichSettings normalizes Mode for segmented controls", () => {
   assert.equal(enriched.Mode, "warp");
   const proxy = enrichSettings(parseSettings("(default)\tMode: Proxy"));
   assert.equal(proxy.Mode, "proxy");
+  const warpProxy = enrichSettings(parseSettings("(user set)\tMode: WarpProxy on port 40000"));
+  assert.equal(warpProxy.Mode, "proxy");
+  assert.equal(warpProxy["Proxy port"], "40000");
+});
+
+test("deriveProxyPort and isProxyOperatingMode handle real warp-cli strings", () => {
+  const settings = parseSettings("(user set)\tMode: WarpProxy on port 40000");
+  assert.equal(deriveProxyPort(settings), "40000");
+  assert.equal(isProxyOperatingMode(settings.Mode), true);
+  assert.equal(isProxyOperatingMode("warp"), false);
 });

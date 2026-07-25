@@ -572,6 +572,27 @@ select:focus-visible,
 }
 
 .app-routing-select {
+  min-width: min(280px, 100%);
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+}
+
+.routing-steps li.done {
+  color: var(--vp-c-text-2, var(--muted));
+  text-decoration: line-through;
+  opacity: 0.85;
+}
+
+.routing-steps li.active {
+  color: var(--accent, #f48120);
+  font-weight: 600;
+}
+
+.routing-steps li.active::marker {
+  color: var(--accent, #f48120);
+}
   min-width: min(320px, 100%);
   padding: 8px 10px;
   border: 1px solid var(--line);

@@ -1,6 +1,6 @@
 # HTTP API
 
-Local control plane on `127.0.0.1` (default port **3847** in launcher, **4173** in example config — see effective config).
+Local control plane on `127.0.0.1`. Default port **4173** (launcher scans up to 30 alternate ports if busy).
 
 ::: tip
 Like [Tavily CLI](https://docs.tavily.com/documentation/tavily-cli) and [Firecrawl CLI](https://docs.firecrawl.dev/sdks/cli), automation goes through a stable HTTP surface — here guarding warp-cli instead of a cloud API key.
@@ -9,13 +9,13 @@ Like [Tavily CLI](https://docs.tavily.com/documentation/tavily-cli) and [Firecra
 ## Base URL
 
 ```
-http://127.0.0.1:3847
+http://127.0.0.1:4173
 ```
 
 Confirm with:
 
 ```bash
-curl -s http://127.0.0.1:3847/api/health | jq
+curl -s http://127.0.0.1:4173/api/health | jq
 ```
 
 ## Design

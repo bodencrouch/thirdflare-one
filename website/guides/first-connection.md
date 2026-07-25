@@ -45,7 +45,7 @@ thirdflare --connect
 From API:
 
 ```bash
-curl -X POST http://127.0.0.1:3847/api/action/connect
+curl -X POST http://127.0.0.1:4173/api/action/connect
 ```
 
 From UI: use the connect toggle in the native panel or Web UI.
@@ -54,7 +54,7 @@ From UI: use the connect toggle in the native panel or Web UI.
 
 ```bash
 thirdflare --warp-status
-curl -s http://127.0.0.1:3847/api/status | jq
+curl -s http://127.0.0.1:4173/api/snapshot | jq '.status'
 ```
 
 ## Operating mode

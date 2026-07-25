@@ -12,7 +12,7 @@ The `info.version` in OpenAPI tracks the API revision — compare with `lib/api-
 
 ## Servers block
 
-Example config lists port `4173`; the launcher may use `3847`. Always read `/api/config` for the effective bind/port.
+Example config lists port `4173`. The launcher uses the same default and may bind a nearby port when busy — read `/api/config` for the effective bind/port.
 
 ## Extending
 

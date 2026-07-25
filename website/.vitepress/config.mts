@@ -66,6 +66,7 @@ export default defineConfig({
             { text: "Kill switch", link: "/guides/kill-switch" },
             { text: "Split tunnel & app routing", link: "/guides/routing" },
             { text: "KDE / NetworkManager", link: "/guides/networkmanager" },
+            { text: "WARP internals", link: "/guides/warp-internals" },
             { text: "Updates", link: "/guides/updates" },
             { text: "systemd daemon", link: "/guides/systemd" }
           ]

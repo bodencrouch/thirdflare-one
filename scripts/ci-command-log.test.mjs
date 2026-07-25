@@ -166,8 +166,9 @@ test("enableLocalProxy sets MASQUE and proxy mode", async () => {
 
   const snap = await httpJson("GET", "/api/snapshot");
   const settings = snap.json.settings || {};
-  const mode = Object.entries(settings).find(([k]) => /mode/i.test(k))?.[1];
-  assert.equal(String(mode).toLowerCase(), "proxy");
+  assert.equal(String(settings.Mode).toLowerCase(), "proxy");
+  assert.ok(res.json.settings);
+  assert.equal(res.json.settings.Mode, "proxy");
 });
 
 test("enableLocalProxy while disconnected sets MASQUE and proxy mode", async () => {
@@ -181,8 +182,9 @@ test("enableLocalProxy while disconnected sets MASQUE and proxy mode", async () 
 
   const snap = await httpJson("GET", "/api/snapshot");
   const settings = snap.json.settings || {};
-  const mode = Object.entries(settings).find(([k]) => /mode/i.test(k))?.[1];
-  assert.equal(String(mode).toLowerCase(), "proxy");
-  const protocol = Object.entries(settings).find(([k]) => /protocol/i.test(k))?.[1] || "";
+  assert.equal(String(settings.Mode).toLowerCase(), "proxy");
+  assert.ok(res.json.settings);
+  assert.equal(res.json.settings.Mode, "proxy");
+  const protocol = settings["Tunnel protocol"] || settings.Protocol || "";
   assert.match(String(protocol), /masque/i);
 });

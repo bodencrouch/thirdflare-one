@@ -810,11 +810,18 @@ async function handleApi(req, res, url) {
           action: "setMode",
           result: redactCommand(modeResult)
         });
-        json(res, modeResult.ok ? 200 : 502, {
-          ok: modeResult.ok,
-          error: modeResult.ok ? undefined : (modeResult.stderr || modeResult.stdout || "Could not enable proxy mode."),
+        const settingsResult = await runWarp(["settings", "list"], { timeout: 15000 });
+        const settings = enrichSettings(parseSettings(settingsResult.stdout || ""));
+        const proxyOk = modeResult.ok && settings.Mode === "proxy";
+        json(res, proxyOk ? 200 : 502, {
+          ok: proxyOk,
+          error: proxyOk
+            ? undefined
+            : (modeResult.stderr || modeResult.stdout || "Could not enable Local proxy mode."),
           result: redactCommand(modeResult),
-          steps
+          steps,
+          settings,
+          mode: settings.Mode
         });
         void afterWarpNetworkSync("enableLocalProxy");
         return;

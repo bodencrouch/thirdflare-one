@@ -10,6 +10,7 @@ Task-oriented docs — start with [First connection](/guides/first-connection), 
 | [Kill switch](/guides/kill-switch) | nftables leak protection |
 | [Split tunnel & app routing](/guides/routing) | Per-app proxy shortcuts |
 | [KDE / NetworkManager](/guides/networkmanager) | VPN profiles in Plasma |
+| [WARP internals](/guides/warp-internals) | warp-cli modes, MASQUE, proxy port |
 | [Updates](/guides/updates) | Client update channel |
 | [systemd](/guides/systemd) | User daemon unit |
 

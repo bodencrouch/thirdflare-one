@@ -19,7 +19,7 @@ Running `thirdflare` with no flags starts the **native tray + app shell** (embed
 | Variable | Effect |
 |----------|--------|
 | `THIRDFLARE_WEBUI=1` | Serve static Web UI from daemon |
-| `THIRDFLARE_PORT` | HTTP port (default `3847`) |
+| `THIRDFLARE_PORT` | HTTP port (default `4173`; launcher scans +30 if busy) |
 | `THIRDFLARE_WARP_CLI` | Path to warp-cli binary |
 | `THIRDFLARE_CONFIG` | Override config file path |
 

@@ -27,7 +27,7 @@ systemctl --user restart thirdflare-one.service
 ## Health
 
 ```bash
-curl -s http://127.0.0.1:3847/api/health
+curl -s http://127.0.0.1:4173/api/health
 ```
 
 Unit files live under `packaging/systemd/` in the repository.

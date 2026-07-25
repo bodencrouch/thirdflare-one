@@ -97,10 +97,14 @@ function statusText(state) {
 }
 
 function settingsText(state) {
+  const modeLine = state.mode === "proxy"
+    ? `Mode: WarpProxy on port ${state.proxyPort || "40000"}`
+    : `Mode: ${state.mode}`;
   return [
-    `Mode: ${state.mode}`,
+    modeLine,
     `Gateway ID: ${state.gatewayId || "(none)"}`,
     `Support URL: https://example.com/support`,
+    `WARP tunnel protocol: ${state.protocol}`,
     `Protocol: ${state.protocol}`,
     `DNS Families: ${state.families}`,
     `DNS logging: ${state.dnsLog ? "enabled" : "disabled"}`,
