@@ -1,3 +1,4 @@
+import { apiFetch } from "./api-client.js";
 import { loadLocale, t, tip, getLocale } from "./i18n.js";
 import {
   appendStatusLine,
@@ -442,7 +443,7 @@ async function refresh({ silent = false, preserveError = false } = {}) {
     render();
   }
   try {
-    const response = await fetch("/api/snapshot");
+    const response = await apiFetch("/api/snapshot");
     state.snapshot = await response.json();
     seedStatusFromSnapshot(state);
     if (state.view === "account") await loadAccount(false);
@@ -467,7 +468,7 @@ async function refresh({ silent = false, preserveError = false } = {}) {
 async function loadKillSwitch(showBusy = true) {
   if (showBusy) state.killswitch.loading = true;
   try {
-    const response = await fetch("/api/killswitch");
+    const response = await apiFetch("/api/killswitch");
     const body = await response.json();
     state.killswitch.desired = Boolean(body.desired);
     state.killswitch.allowLan = Boolean(body.allowLan);
@@ -491,7 +492,7 @@ async function setKillSwitch(enabled, allowLan = state.killswitch.allowLan) {
   state.error = null;
   render();
   try {
-    const response = await fetch("/api/killswitch", {
+    const response = await apiFetch("/api/killswitch", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ enabled, allowLan })
@@ -590,7 +591,7 @@ async function loadAccount(showBusy = true) {
     render();
   }
   try {
-    const response = await fetch("/api/account");
+    const response = await apiFetch("/api/account");
     state.account = await response.json();
   } catch (error) {
     state.error = error.message;
@@ -604,7 +605,7 @@ async function loadDesktopApps(showBusy = true) {
     render();
   }
   try {
-    const response = await fetch("/api/apps");
+    const response = await apiFetch("/api/apps");
     const body = await response.json();
     state.desktopApps.list = body.ok ? body.apps || [] : [];
     if (!state.desktopApps.selectedId && state.desktopApps.list.length) {
@@ -632,7 +633,7 @@ async function createAppShortcut() {
   state.error = null;
   render();
   try {
-    const response = await fetch("/api/apps/proxy-launcher", {
+    const response = await apiFetch("/api/apps/proxy-launcher", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ appId, port: proxyPortValue() })
@@ -658,7 +659,7 @@ async function action(actionName, value, secondary, confirmCommand = false) {
   state.error = null;
   render();
   try {
-    const response = await fetch("/api/action", {
+    const response = await apiFetch("/api/action", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ action: actionName, value, secondary })
@@ -682,7 +683,7 @@ async function enableLocalProxy() {
   state.error = null;
   render();
   try {
-    const response = await fetch("/api/action", {
+    const response = await apiFetch("/api/action", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ action: "enableLocalProxy" })
@@ -991,7 +992,7 @@ function simpleShell() {
 async function loadSimpleAbout() {
   if (state.version) return;
   try {
-    const response = await fetch("/api/version");
+    const response = await apiFetch("/api/version");
     state.version = await response.json();
   } catch (error) {
     state.error = error.message;
@@ -1843,7 +1844,7 @@ function appView() {
   localeRow.querySelector("[data-locale]").value = getLocale();
   localeRow.querySelector("[data-save-locale]").onclick = async () => {
     const next = localeRow.querySelector("[data-locale]").value;
-    await fetch("/api/config/session", {
+    await apiFetch("/api/config/session", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ config: { ui: { locale: next } } })
@@ -2137,7 +2138,7 @@ async function applySelectedSource() {
   state.error = null;
   render();
   try {
-    const response = await fetch("/api/update/source", {
+    const response = await apiFetch("/api/update/source", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ owner, repo })
@@ -2160,7 +2161,7 @@ async function applySelectedSource() {
 }
 
 async function saveUpdatePrefs(partial) {
-  const response = await fetch("/api/config/session", {
+  const response = await apiFetch("/api/config/session", {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ config: { updates: partial } })
@@ -2173,7 +2174,7 @@ async function setTrayAutostart(enabled) {
   state.busy = true;
   render();
   try {
-    const response = await fetch("/api/config/tray-autostart", {
+    const response = await apiFetch("/api/config/tray-autostart", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ autostart: enabled })
@@ -2194,7 +2195,7 @@ async function loadUpdateCatalog({ force = false } = {}) {
   state.update.loadingCatalog = true;
   render();
   try {
-    const response = await fetch("/api/update/forks");
+    const response = await apiFetch("/api/update/forks");
     const body = await response.json();
     state.update.upstream = body.upstream || null;
     state.update.forks = body.forks || [];
@@ -2211,9 +2212,9 @@ async function loadUpdateCatalog({ force = false } = {}) {
 async function loadAppPanel() {
   try {
     const [versionRes, configRes, healthRes] = await Promise.all([
-      fetch("/api/version"),
-      fetch("/api/config"),
-      fetch("/api/health")
+      apiFetch("/api/version"),
+      apiFetch("/api/config"),
+      apiFetch("/api/health")
     ]);
     state.version = await versionRes.json();
     const configBody = await configRes.json();
@@ -2237,7 +2238,7 @@ async function runUpdateCheck() {
   state.error = null;
   render();
   try {
-    const response = await fetch("/api/update/check");
+    const response = await apiFetch("/api/update/check");
     state.update.result = await response.json();
     if (state.update.result?.applyConfirmToken) {
       state.update.confirmToken = state.update.result.applyConfirmToken;
@@ -2263,7 +2264,7 @@ async function loadReleases() {
     const owner = state.update.selectedOwner;
     const repo = state.update.selectedRepo;
     const query = owner && repo ? `?owner=${encodeURIComponent(owner)}&repo=${encodeURIComponent(repo)}` : "";
-    const response = await fetch(`/api/update/releases${query}`);
+    const response = await apiFetch(`/api/update/releases${query}`);
     const body = await response.json();
     state.update.releases = body.releases || [];
   } catch (error) {
@@ -2278,7 +2279,7 @@ async function applySelectedUpdate() {
   render();
   try {
     const tag = state.update.selectedTag || undefined;
-    const prepRes = await fetch("/api/update/prepare", {
+    const prepRes = await apiFetch("/api/update/prepare", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ tag })
@@ -2296,7 +2297,7 @@ async function applySelectedUpdate() {
       render();
       return;
     }
-    const response = await fetch("/api/update/apply", {
+    const response = await apiFetch("/api/update/apply", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
@@ -2321,11 +2322,11 @@ async function applySelectedUpdate() {
 
 async function maybeStartupUpdateCheck() {
   try {
-    const configRes = await fetch("/api/config");
+    const configRes = await apiFetch("/api/config");
     const configBody = await configRes.json();
     state.appConfig = configBody.config;
     if (!configBody.config?.updates?.checkOnStartup) return;
-    const response = await fetch("/api/update/check");
+    const response = await apiFetch("/api/update/check");
     const result = await response.json();
     if (result.updateAvailable) {
       state.toast = t("app.updateAvailable", { version: result.latest });
@@ -2632,7 +2633,7 @@ function applyRouteFromHash() {
 async function boot() {
   let locale = "en";
   try {
-    const configRes = await fetch("/api/config");
+    const configRes = await apiFetch("/api/config");
     const configBody = await configRes.json();
     state.appConfig = configBody.config;
     locale = configBody.config?.ui?.locale || "en";

@@ -2,11 +2,74 @@
   "openapi": "3.0.3",
   "info": {
     "title": "ThirdFlare One local API",
-    "version": "0.2.2",
-    "description": "Control-plane contract for the Node daemon. Validated in Plane M CI against a mock warp-cli."
+    "version": "0.2.8",
+    "description": "Control-plane contract for the Node daemon. Validated in Plane M CI against a mock warp-cli.\n\nRequests that change anything (POST/PUT/PATCH/DELETE) must come from this computer, be addressed to a loopback Host, send `Content-Type: application/json`, and carry the local session credential in `X-Thirdflare-Session`. Fetch the credential from `GET /api/session` or read it from `~/.config/thirdflare/session-<port>.token`."
   },
   "servers": [{ "url": "http://127.0.0.1:4173" }],
+  "components": {
+    "securitySchemes": {
+      "localSession": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-Thirdflare-Session",
+        "description": "Per-daemon credential minted at startup and written to a private file only this user can read."
+      }
+    },
+    "responses": {
+      "Blocked": {
+        "description": "Request refused by the local request gate (foreign Host or Origin, remote peer, or missing session credential).",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "required": ["ok", "error", "reason"],
+              "properties": {
+                "ok": { "type": "boolean", "enum": [false] },
+                "error": { "type": "string" },
+                "reason": {
+                  "type": "string",
+                  "enum": [
+                    "host_not_allowed",
+                    "remote_peer_denied",
+                    "cross_site_denied",
+                    "cross_origin_denied",
+                    "json_required",
+                    "session_required"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
   "paths": {
+    "/api/session": {
+      "get": {
+        "summary": "Session credential for local clients",
+        "description": "Returns this daemon's session credential. Answered only for same-origin loopback callers; cross-site requests are refused.",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["ok", "session", "header"],
+                  "properties": {
+                    "ok": { "type": "boolean" },
+                    "session": { "type": "string" },
+                    "header": { "type": "string", "enum": ["x-thirdflare-session"] }
+                  }
+                }
+              }
+            }
+          },
+          "403": { "$ref": "#/components/responses/Blocked" }
+        }
+      }
+    },
     "/api/health": {
       "get": {
         "summary": "Liveness",
@@ -158,7 +221,10 @@
     "/api/action": {
       "post": {
         "summary": "Whitelisted warp-cli mutation",
+        "security": [{ "localSession": [] }],
         "responses": {
+          "403": { "$ref": "#/components/responses/Blocked" },
+          "415": { "$ref": "#/components/responses/Blocked" },
           "200": {
             "description": "OK",
             "content": {
