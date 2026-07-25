@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+
+- Local API mutations now require a loopback Host and peer, a same-origin request, a JSON body, and this daemon's session credential (`X-Thirdflare-Session`), so a web page cannot drive WARP or change settings. Read-only endpoints stay open for diagnostics
+- Serve `nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer`, and a Content-Security-Policy on API and Web UI responses
+- AppImage self-update installs only after a detached Ed25519 signature from a pinned release key verifies; missing, malformed, and unknown-key signatures fail closed and leave the installed binary untouched
+- Refuse to install a release older than the installed version
+- Fail the release build when an AppImage would ship without its `.sig` sidecar
+
 ### Documentation
 
 - Publish VitePress docs to GitHub Pages (install, CLI, API, guides, packaging)
