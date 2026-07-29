@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.8](https://github.com/bodencrouch/thirdflare-one/compare/v0.2.7...v0.2.8) (2026-07-29)
+
+
+### Features
+
+* log dock, KDE routing UX, NM integration, and app routing shortcuts ([e708e4e](https://github.com/bodencrouch/thirdflare-one/commit/e708e4ee2419afa15ee5af47908e310be0ed6383))
+* native tray, polkit killswitch, and bodencrouch org rename ([5b97882](https://github.com/bodencrouch/thirdflare-one/commit/5b978823699cff7e852dc4cf0c916daab806edb7))
+* **webui:** always-on Web UI modes and native KDE settings ([e1e13df](https://github.com/bodencrouch/thirdflare-one/commit/e1e13df957dc2b32103c6a7d3d505a40cca3f2d8))
+
+
+### Bug Fixes
+
+* **ci:** cross-platform tray tests and skip npm install hook on CI ([cd1b7ca](https://github.com/bodencrouch/thirdflare-one/commit/cd1b7ca82cfef5e5cefd6c5cfd32aeff707b905a))
+* **config:** migrate oldrepublicwizard update source to bodencrouch ([5eba858](https://github.com/bodencrouch/thirdflare-one/commit/5eba8588601a87536e3e1dae36840384807c0c8b))
+* **launcher:** single KDE entry, native tray default, and stale daemon restart ([aadc9f8](https://github.com/bodencrouch/thirdflare-one/commit/aadc9f848f4e0f1d67f4c47e8ac9de043bf4afcf))
+* **test:** skip tray autostart sync assertions on non-Linux CI ([122f83c](https://github.com/bodencrouch/thirdflare-one/commit/122f83c8f755a678a71a6da9ad6e3974323d4547))
+
 ## [Unreleased]
 
 ### Documentation
