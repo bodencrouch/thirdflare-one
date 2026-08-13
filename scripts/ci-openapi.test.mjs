@@ -76,7 +76,9 @@ before(async () => {
       WARP_CLI: mockWarp,
       MOCK_WARP_STATE: stateFile,
       THIRDFLARE_NOTIFICATIONS: "0",
-      THIRDFLARE_NFT_NO_PKEXEC: "1"
+      THIRDFLARE_NFT_NO_PKEXEC: "1",
+      THIRDFLARE_TRAY_SKIP_SYSTEMD: "1",
+      THIRDFLARE_TRAY_LIVE: "0"
     },
     stdio: "pipe"
   });
@@ -140,6 +142,14 @@ test("OpenAPI /api/config response shape", async () => {
   const res = await httpJson("GET", "/api/config");
   assert.equal(res.status, 200);
   assertRequired(res.json, ["ok", "config"], "config");
+  assert.equal(res.json.config?.tray?.shell === "cloudflare" || res.json.config?.tray?.shell === "thirdflare", true);
+  assert.equal(typeof res.json.config?.tray?.cloudflareAvailable, "boolean");
+});
+
+test("OpenAPI POST /api/config/tray-shell response shape", async () => {
+  const res = await httpJson("POST", "/api/config/tray-shell", { shell: "cloudflare" });
+  assert.equal(res.status, 200);
+  assertRequired(res.json, schemaRequired("/api/config/tray-shell", "post"), "tray-shell");
 });
 
 test("OpenAPI /api/action connect response shape", async () => {
