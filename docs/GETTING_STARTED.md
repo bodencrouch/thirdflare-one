@@ -60,7 +60,12 @@ From the repository root:
 ./thirdflare-one install
 ```
 
-This is **idempotent** — safe to run again after `git pull`.
+This is **idempotent** — safe to run again after `git pull`. On a terminal it asks which desktop app should start at login (Cloudflare One Client by default). Non-interactive:
+
+```bash
+./thirdflare-one install --shell cloudflare
+./thirdflare-one install --shell thirdflare
+```
 
 **What it installs:**
 
@@ -208,9 +213,18 @@ Packaged `.deb`/`.rpm` installs also ship `/usr/lib/systemd/user/thirdflare-one.
 
 To enable the Web UI on the service, edit config or use a drop-in — see [CONFIGURATION.md](CONFIGURATION.md).
 
-### Optional tray menu (PyQt6 native shell)
+### Desktop app (Cloudflare One Client or ThirdFlare One tray)
 
-On KDE Plasma / Wayland, ThirdFlare One uses **PyQt6 + WebEngine** for a native tray and embedded control panel (Cloudflare One Client–style simple UI by default):
+Linux WARP already ships **Cloudflare One Client** in the system tray. ThirdFlare One uses that as the default desktop app and keeps its own PyQt6 tray as the other option. Only one tray runs at a time. Switch in **Settings → Desktop app**, or at install with `--shell`.
+
+```bash
+thirdflare                    # selected desktop app (Cloudflare One Client by default)
+thirdflare --tray             # ThirdFlare One tray even if Cloudflare One Client is selected
+thirdflare-one-tray --check   # print selected app and ThirdFlare tray readiness
+thirdflare-one-tray --stop    # stop the active desktop app
+```
+
+**ThirdFlare One tray** (when selected) uses PyQt6 + WebEngine on KDE Plasma / Wayland:
 
 ```bash
 # Fedora
@@ -218,25 +232,23 @@ sudo dnf install python3-pyqt6 python3-pyqt6-webengine
 
 # Debian/Ubuntu
 sudo apt install python3-pyqt6 python3-pyqt6-webengine
-
-thirdflare-one-tray          # tray + native window (left-click tray icon)
-thirdflare-one-tray --panel  # show window directly
-thirdflare-one-tray --check  # verify dependencies
 ```
 
 **X11 fallback:** `yad` status-notifier menu when PyQt6 is unavailable.
 
 Packaged `.deb`/`.rpm` installs ship `/usr/bin/thirdflare-one-tray` and recommend PyQt6 packages.
 
-### Tray autostart (opt-in)
+### Tray autostart (ThirdFlare One tray)
 
-Enable in **App → Settings** (simple shell) or user config:
+When the desktop app is ThirdFlare One, enable **Start tray at login** in Settings, or:
 
 ```json
-"tray": { "autostart": true }
+"tray": { "shell": "thirdflare", "autostart": true }
 ```
 
-This writes `~/.config/autostart/thirdflare-one-tray.desktop`. Default is **off** so headless installs are unaffected.
+This writes `~/.config/autostart/thirdflare-one-tray.desktop` and hides the WARP package’s Cloudflare One Client autostart for this user. Choosing Cloudflare One Client restores that autostart and turns off the ThirdFlare One tray entry.
+
+ThirdFlare One does not bundle Cloudflare’s desktop app — it launches the copy already installed with `warp-cli`.
 
 ### Always On (Linux kill switch)
 

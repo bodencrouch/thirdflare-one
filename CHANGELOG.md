@@ -18,8 +18,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Features
 
+- Desktop app switch: default to host Cloudflare One Client tray, or ThirdFlare One’s PyQt6 tray (`tray.shell`, `POST /api/config/tray-shell`, install `--shell`)
 - Linux native shell: PyQt6 tray + embedded Web UI with Cloudflare One Client–style simple layout (`/?shell=1`) and expert-mode toggle
-- Native PyQt6 system settings (`thirdflare-one-tray --settings`) for Web UI enable, HTTP port, tray autostart, and notifications
+- Native PyQt6 system settings (`thirdflare-one-tray --settings`) for Web UI enable, HTTP port, desktop app, tray autostart, and notifications
 - Web UI startup modes: API-only by default (`--no-open`, systemd); `--daemon` serves full static UI with no runtime disable toggle
 - Persist Web UI and server settings via `POST /api/config/webui`, `POST /api/config/server`, and `POST /api/config/ui`
 - First-class tray packaging: stage tray Python modules, `/usr/bin/thirdflare-one-tray`, PyQt6 recommends in deb/rpm/Fedora spec

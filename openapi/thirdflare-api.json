@@ -155,6 +155,30 @@
         }
       }
     },
+    "/api/config/tray-shell": {
+      "post": {
+        "summary": "Persist desktop shell (cloudflare or thirdflare)",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["ok", "config"],
+                  "properties": {
+                    "ok": { "type": "boolean" },
+                    "config": { "type": "object" },
+                    "sync": { "type": "object" },
+                    "liveSwap": { "type": "object" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/action": {
       "post": {
         "summary": "Whitelisted warp-cli mutation",

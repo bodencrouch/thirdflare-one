@@ -123,7 +123,9 @@ before(async () => {
       MOCK_WARP_STATE: stateFile,
       THIRDFLARE_NOTIFICATIONS: "0",
       THIRDFLARE_NFT_NO_PKEXEC: "1",
-      THIRDFLARE_WEBUI: "1"
+      THIRDFLARE_WEBUI: "1",
+      THIRDFLARE_TRAY_SKIP_SYSTEMD: "1",
+      THIRDFLARE_TRAY_LIVE: "0"
     },
     stdio: "pipe"
   });
@@ -409,6 +411,11 @@ test("POST /api/config/tray-autostart persists and syncs desktop entry", async (
   const bad = await httpJson("POST", "/api/config/tray-autostart", { autostart: "yes" });
   assert.equal(bad.status, 400);
 
+  const thirdflare = await httpJson("POST", "/api/config/tray-shell", { shell: "thirdflare" });
+  assert.equal(thirdflare.status, 200);
+  assert.equal(thirdflare.json.config?.tray?.shell, "thirdflare");
+  assert.equal(thirdflare.json.config?.tray?.active, "thirdflare");
+
   const enable = await httpJson("POST", "/api/config/tray-autostart", { autostart: true });
   assert.equal(enable.status, 200);
   assert.equal(enable.json.ok, true);
@@ -427,6 +434,35 @@ test("POST /api/config/tray-autostart persists and syncs desktop entry", async (
   } else {
     assert.equal(disable.json.sync?.skipped, true);
   }
+});
+
+test("POST /api/config/tray-shell persists cloudflare or thirdflare", async () => {
+  const bad = await httpJson("POST", "/api/config/tray-shell", { shell: "nope" });
+  assert.equal(bad.status, 400);
+
+  const missing = await httpJson("POST", "/api/config/tray-shell", {});
+  assert.equal(missing.status, 400);
+
+  const cloudflare = await httpJson("POST", "/api/config/tray-shell", { shell: "cloudflare" });
+  assert.equal(cloudflare.status, 200);
+  assert.equal(cloudflare.json.ok, true);
+  assert.equal(cloudflare.json.config?.tray?.shell, "cloudflare");
+  assert.equal(typeof cloudflare.json.config?.tray?.cloudflareAvailable, "boolean");
+  assert.ok(cloudflare.json.config?.tray?.active === "cloudflare" || cloudflare.json.config?.tray?.active === "thirdflare");
+  assert.ok(cloudflare.json.sync);
+  assert.ok(cloudflare.json.liveSwap);
+  assert.equal(cloudflare.json.liveSwap.attempted, false);
+
+  const got = await httpJson("GET", "/api/config");
+  assert.equal(got.status, 200);
+  assert.equal(got.json.config?.tray?.shell, "cloudflare");
+  assert.equal(typeof got.json.config?.tray?.cloudflareAvailable, "boolean");
+  assert.ok(got.json.notes?.persistEndpoints?.includes("POST /api/config/tray-shell"));
+
+  const thirdflare = await httpJson("POST", "/api/config/tray-shell", { shell: "thirdflare" });
+  assert.equal(thirdflare.status, 200);
+  assert.equal(thirdflare.json.config?.tray?.shell, "thirdflare");
+  assert.equal(thirdflare.json.config?.tray?.active, "thirdflare");
 });
 
 test("POST /api/action applyLicense and registerOrganization validate input", async () => {

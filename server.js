@@ -17,12 +17,13 @@ import {
   setSessionKillSwitch,
   persistUserKillSwitch,
   persistUserTrayAutostart,
+  persistUserTrayShell,
   persistUserWebUi,
   persistUserServer,
   persistUserUi,
   isValidServerPort
 } from "./lib/config.mjs";
-import { syncTrayAutostart } from "./lib/tray/autostart.mjs";
+import { applyTrayShell, decorateTrayConfig, isValidTrayShell, syncTrayShell } from "./lib/tray/shell.mjs";
 import { getVersion, getVersionInfo } from "./lib/version.mjs";
 import { API_REVISION } from "./lib/api-revision.mjs";
 import { applyUpdate, checkForUpdate, prepareApply } from "./lib/update/index.mjs";
@@ -68,6 +69,10 @@ const publicRoot = join(root, "public");
 const config = reloadConfig();
 const port = Number(config.server?.port || 4173);
 const listenHost = effectiveBind(config);
+
+function publicConfig(cfg = getConfig()) {
+  return decorateTrayConfig(cfg);
+}
 
 const MIME = {
   ".html": "text/html; charset=utf-8",
@@ -577,7 +582,7 @@ async function handleApi(req, res, url) {
       setSessionUpdateSource({ owner, repo });
       json(res, 200, {
         ok: true,
-        config: getConfig(),
+        config: publicConfig(getConfig()),
         source: { owner, repo },
         sources: describeConfigSources()
       });
@@ -602,7 +607,7 @@ async function handleApi(req, res, url) {
       const active = getConfig();
       json(res, 200, {
         ok: true,
-        config: active,
+        config: publicConfig(active),
         sources: describeConfigSources(),
         effective: {
           bind: effectiveBind(active),
@@ -615,7 +620,8 @@ async function handleApi(req, res, url) {
             "POST /api/config/webui",
             "POST /api/config/server",
             "POST /api/config/ui",
-            "POST /api/config/tray-autostart"
+            "POST /api/config/tray-autostart",
+            "POST /api/config/tray-shell"
           ]
         }
       });
@@ -631,7 +637,7 @@ async function handleApi(req, res, url) {
       }
       json(res, 200, {
         ok: true,
-        config: getConfig(),
+        config: publicConfig(getConfig()),
         sources: describeConfigSources()
       });
       return;
@@ -644,8 +650,39 @@ async function handleApi(req, res, url) {
         return;
       }
       const config = persistUserTrayAutostart({ autostart: body.autostart });
-      const sync = syncTrayAutostart({ autostart: body.autostart });
-      json(res, 200, { ok: true, config, sync });
+      const applied = syncTrayShell({
+        shell: config.tray?.shell,
+        autostart: config.tray?.autostart
+      });
+      json(res, 200, {
+        ok: true,
+        config: publicConfig(config),
+        sync: applied.tray || applied
+      });
+      return;
+    }
+
+    if (req.method === "POST" && url.pathname === "/api/config/tray-shell") {
+      const body = await readJson(req);
+      if (!isValidTrayShell(body?.shell)) {
+        json(res, 400, { ok: false, error: "shell must be cloudflare or thirdflare" });
+        return;
+      }
+      const config = persistUserTrayShell({ shell: body.shell });
+      if (!config) {
+        json(res, 400, { ok: false, error: "shell must be cloudflare or thirdflare" });
+        return;
+      }
+      const applied = applyTrayShell({
+        shell: config.tray?.shell,
+        autostart: config.tray?.autostart
+      });
+      json(res, 200, {
+        ok: true,
+        config: publicConfig(config),
+        sync: applied.sync,
+        liveSwap: applied.liveSwap
+      });
       return;
     }
 
@@ -669,7 +706,7 @@ async function handleApi(req, res, url) {
       });
       json(res, 200, {
         ok: true,
-        config,
+        config: publicConfig(config),
         restartRequired: true
       });
       return;
@@ -698,7 +735,7 @@ async function handleApi(req, res, url) {
       });
       json(res, 200, {
         ok: true,
-        config,
+        config: publicConfig(config),
         restartRequired: true
       });
       return;
@@ -715,7 +752,7 @@ async function handleApi(req, res, url) {
         return;
       }
       const config = persistUserUi({ notifications: body.notifications });
-      json(res, 200, { ok: true, config });
+      json(res, 200, { ok: true, config: publicConfig(config) });
       return;
     }
 

@@ -69,7 +69,9 @@ before(async () => {
       WARP_CLI: mockWarp,
       MOCK_WARP_STATE: stateFile,
       THIRDFLARE_NOTIFICATIONS: "0",
-      THIRDFLARE_NFT_NO_PKEXEC: "1"
+      THIRDFLARE_NFT_NO_PKEXEC: "1",
+      THIRDFLARE_TRAY_SKIP_SYSTEMD: "1",
+      THIRDFLARE_TRAY_LIVE: "0"
     },
     stdio: "pipe"
   });

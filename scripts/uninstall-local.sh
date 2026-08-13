@@ -59,6 +59,17 @@ done
 
 thirdflare_remove_legacy_desktop_entries "$APPLICATIONS_DIR"
 
+if [[ -f "${INSTALL_DIR}/scripts/tray-shell-cli.mjs" ]]; then
+  node "${INSTALL_DIR}/scripts/tray-shell-cli.mjs" stop-thirdflare >/dev/null 2>&1 || true
+fi
+
+AUTOSTART_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/autostart"
+rm -f "${AUTOSTART_DIR}/thirdflare-one-tray.desktop"
+CF_OVERRIDE="${AUTOSTART_DIR}/com.cloudflare.WarpTaskbar.desktop"
+if [[ -f "$CF_OVERRIDE" ]] && grep -q "Managed by ThirdFlare One" "$CF_OVERRIDE"; then
+  rm -f "$CF_OVERRIDE"
+fi
+
 for link in thirdflare thirdflare-one thirdflare-one-tray; do
   rm -f "${LOCAL_BIN}/${link}"
 done
