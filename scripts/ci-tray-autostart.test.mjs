@@ -399,10 +399,12 @@ test("sync-tray-autostart --shell thirdflare persists without prompting", () => 
     execFileSync(process.execPath, [syncScript, "--shell", "cloudflare"], { env, encoding: "utf8" });
     const cloudflare = JSON.parse(readFileSync(join(userDir, "config.json"), "utf8"));
     assert.equal(cloudflare.tray.shell, "cloudflare");
-    // The preference is remembered, but the entry that would fight Cloudflare
-    // at login is gone — that is the part that has to be true.
+    // The preference is remembered either way. Whether the entry exists depends
+    // on whether this host actually has Cloudflare One Client: without it the
+    // active shell falls back to thirdflare, and the entry belongs there.
     assert.equal(cloudflare.tray.autostart, true);
-    assert.equal(existsSync(trayAutostartPath(env)), false);
+    const active = describeTrayShell({ shell: "cloudflare", autostart: true }).active;
+    assert.equal(existsSync(trayAutostartPath(env)), active === "thirdflare");
 
     // --if-unset seeds a default; it must never overwrite an existing choice.
     execFileSync(process.execPath, [syncScript, "--shell", "thirdflare", "--if-unset"], { env, encoding: "utf8" });

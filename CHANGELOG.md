@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixes
 
+- Green up Plane M CI: the proxy-launcher XDG tests asserted Linux-only behaviour on macOS and Windows, where `listDesktopApps()` returns `[]` by design, so every OS had been failing since July
 - Reject cross-site writes on every mutating route (`Sec-Fetch-Site`, `Origin`, and a required `application/json` content type), so a hostile page can no longer drive `warp-cli`, systemd, or the user's config through the loopback daemon
 - Run `systemctl --user` and `pkill` off the event loop — a hung user manager could block every SSE subscriber and health check for the length of the timeout
 - Fix tray autostart never starting: the generated entry carried `Hidden=true`, which in an autostart directory means "ignore this entry" (`systemd-xdg-autostart-generator` logs "not generating unit, entry is hidden")
