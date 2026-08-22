@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixes
+
+- Keep the ThirdFlare Web UI off while Cloudflare One Client is the desktop app — the daemon now starts API-only on that path
+- Turn the Web UI back off when switching from the ThirdFlare One tray to Cloudflare One Client, unless `webui.enabled` is set
+- Leave `warp-desktop-svc` unit management to the host under Flatpak instead of writing a unit systemd never reads
+- Let Cloudflare One Client own status notifications while it is active, so one WARP transition no longer notifies twice
+- Detect a running `warp-desktop-svc` by command line — `pgrep -x` never matched its 16-character process name, so the fallback could start a second copy
+- Report WARP status from the active desktop app in `thirdflare-one-tray --status`
+- Start `warp-taskbar` from the user's home so its `.sentry-native/` cache no longer lands in the ThirdFlare install tree
+
 ### Documentation
 
 - Publish VitePress docs to GitHub Pages (install, CLI, API, guides, packaging)
@@ -19,6 +29,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Features
 
 - Desktop app switch: default to host Cloudflare One Client tray, or ThirdFlare One’s PyQt6 tray (`tray.shell`, `POST /api/config/tray-shell`, install `--shell`)
+- Run `warp-desktop-svc` from a ThirdFlare-managed systemd user unit when the WARP package ships none (`~/.config/systemd/user/thirdflare-warp-desktop-svc.service`)
+- Launch `warp-taskbar` and `warp-desktop-svc` on the host through `flatpak-spawn --host` when ThirdFlare One runs under Flatpak
+- Report `warp-taskbar` and `warp-desktop-svc` state in `thirdflare-one-tray --check`
 - Linux native shell: PyQt6 tray + embedded Web UI with Cloudflare One Client–style simple layout (`/?shell=1`) and expert-mode toggle
 - Native PyQt6 system settings (`thirdflare-one-tray --settings`) for Web UI enable, HTTP port, desktop app, tray autostart, and notifications
 - Web UI startup modes: API-only by default (`--no-open`, systemd); `--daemon` serves full static UI with no runtime disable toggle

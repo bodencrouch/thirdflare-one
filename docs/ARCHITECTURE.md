@@ -38,7 +38,7 @@ flowchart LR
 | `scripts/tray-qt.py` | Embedded WebEngine window + ThirdFlare One system tray |
 | `scripts/thirdflare-nft-apply` | Polkit-scoped privileged helper for kill-switch nft apply |
 | `lib/tray/autostart.mjs` | ThirdFlare One tray XDG autostart (`tray.autostart`) |
-| `lib/tray/shell.mjs` | Desktop-shell detection, Cloudflare One Client autostart override, live start/stop |
+| `lib/tray/shell.mjs` | Desktop-shell detection, Cloudflare One Client autostart override, `warp-desktop-svc` unit management, live start/stop |
 | `lib/warp/status.mjs` | Shared `warp-cli` status parsing |
 | `lib/notify/` | Desktop notifications (`notify-send`) + status watcher |
 | `scripts/health-check.mjs` | Used by launcher and CI to verify `/api/health` |

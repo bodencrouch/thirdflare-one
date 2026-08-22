@@ -23,7 +23,14 @@ import {
   persistUserUi,
   isValidServerPort
 } from "./lib/config.mjs";
-import { applyTrayShell, decorateTrayConfig, isValidTrayShell, syncTrayShell } from "./lib/tray/shell.mjs";
+import {
+  applyTrayShell,
+  decorateTrayConfig,
+  describeTrayShell,
+  isValidTrayShell,
+  shouldWatchStatusNotifications,
+  syncTrayShell
+} from "./lib/tray/shell.mjs";
 import { getVersion, getVersionInfo } from "./lib/version.mjs";
 import { API_REVISION } from "./lib/api-revision.mjs";
 import { applyUpdate, checkForUpdate, prepareApply } from "./lib/update/index.mjs";
@@ -1021,13 +1028,24 @@ createServer(async (req, res) => {
     console.log("API-only mode (webui.enabled=false). Static UI is not served.");
   }
 
+  // Cloudflare One Client posts its own status notifications. Skip ours while it
+  // is the active desktop app so a single transition does not notify twice.
+  const activeShell = describeTrayShell({
+    shell: getConfig().tray?.shell,
+    autostart: getConfig().tray?.autostart
+  }).active;
   const notifyWatcher = startStatusWatcher({
     statusListener: getStatusListener(),
-    enabled: getConfig().ui?.notifications !== false,
+    enabled: shouldWatchStatusNotifications({
+      notifications: getConfig().ui?.notifications !== false,
+      active: activeShell
+    }),
     env: process.env
   });
   if (notifyWatcher.started) {
     console.log("Desktop notifications enabled (ui.notifications).");
+  } else if (activeShell === "cloudflare") {
+    console.log("Desktop notifications left to Cloudflare One Client (tray.shell=cloudflare).");
   }
 
   // Reconcile kill switch: enable when desired; clear orphan table only when probe sees it.

@@ -25,7 +25,7 @@ ThirdFlare One tray
 Usage:
   thirdflare-one-tray            Start the selected desktop app (Cloudflare One Client by default)
   thirdflare-one-tray --force-thirdflare
-                                 Start the ThirdFlare One tray even if Cloudflare One Client is selected
+                                 Start the ThirdFlare One tray instead, just this once
   thirdflare-one-tray --panel    Show the ThirdFlare One window (starts tray if needed)
   thirdflare-one-tray --settings Open ThirdFlare One preferences (PyQt6)
   thirdflare-one-tray --stop     Stop the active desktop app
@@ -34,6 +34,9 @@ Usage:
   thirdflare-one-tray --help     Show this help
 
 Also available as: thirdflare-one --tray
+
+Cloudflare One Client is the default desktop app. Pick the ThirdFlare One tray in
+Settings to use this project's own tray and control panel instead.
 
 On KDE Plasma / Wayland the ThirdFlare One tray uses PyQt6 with the full Web UI embedded (left-click).
 Use thirdflare-one --no-open for API-only daemon mode without a desktop app.
@@ -67,7 +70,7 @@ tray_active_shell() {
 }
 
 start_cloudflare_shell() {
-  ensure_daemon
+  ensure_daemon_api_only
   mkdir -p "$RUNTIME_DIR" "$CACHE_DIR"
   tray_shell_cli stop-thirdflare >/dev/null 2>&1 || true
   clear_tray_pid
@@ -257,6 +260,38 @@ ensure_daemon() {
     echo "Starting ThirdFlare One daemon for tray actions..." >&2
   fi
   THIRDFLARE_WEBUI=1 "$LAUNCHER" --daemon >/dev/null
+}
+
+webui_config_enabled() {
+  [[ "$(tray_shell_cli webui 2>/dev/null || echo disabled)" == "enabled" ]]
+}
+
+daemon_url() {
+  "$LAUNCHER" --status 2>/dev/null | sed -n 's|.* at \(http://[^ ]*\)$|\1|p'
+}
+
+daemon_serves_webui() {
+  local url
+  url="$(daemon_url)"
+  [[ -n "$url" ]] || return 1
+  "$(tray_node_bin)" "$APP_DIR/scripts/health-webui-check.mjs" "$url/api/health" --require-webui >/dev/null 2>&1
+}
+
+# Cloudflare One Client needs no ThirdFlare UI. Start the daemon API-only so the
+# Web UI stays off until someone turns it on.
+ensure_daemon_api_only() {
+  if webui_config_enabled; then
+    # The user turned the Web UI on in config. Leave it on.
+    THIRDFLARE_WEBUI=1 "$LAUNCHER" --daemon >/dev/null
+    return
+  fi
+  if daemon_serves_webui; then
+    echo "Turning off the ThirdFlare Web UI — Cloudflare One Client is the desktop app." >&2
+    "$LAUNCHER" --stop >/dev/null 2>&1 || true
+  elif ! "$LAUNCHER" --status >/dev/null 2>&1; then
+    echo "Starting ThirdFlare One daemon (API only)..." >&2
+  fi
+  THIRDFLARE_WEBUI=0 "$LAUNCHER" --no-open >/dev/null
 }
 
 tray_process_running() {
@@ -459,6 +494,8 @@ print_check() {
   local reason backend py
   echo "desktop-app: $(tray_active_shell)"
   echo "cloudflare-gui: $(tray_shell_cli available 2>/dev/null || echo no)"
+  echo "warp-taskbar: $(tray_shell_cli taskbar 2>/dev/null || echo unknown)"
+  echo "warp-desktop-svc: $(tray_shell_cli svc 2>/dev/null || echo unknown)"
   if reason="$(tray_diagnose)"; then
     backend="$(tray_backend)"
     echo "tray: ready"
@@ -508,7 +545,9 @@ case "${1:-}" in
     fi
     ;;
   --status)
-    if tray_qt_available && [[ "${2:-}" != "--force-shell" ]]; then
+    if [[ "$(tray_active_shell)" == "cloudflare" && "${2:-}" != "--force-shell" ]]; then
+      notify_status
+    elif tray_qt_available && [[ "${2:-}" != "--force-shell" ]]; then
       THIRDFLARE_APP_DIR="$APP_DIR" "$(tray_python_bin)" "$QT_TRAY" --status
     elif tray_sni_available && [[ "${2:-}" != "--force-shell" ]]; then
       THIRDFLARE_APP_DIR="$APP_DIR" "$(tray_python_bin)" "$SNI_TRAY" --status

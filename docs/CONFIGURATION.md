@@ -65,7 +65,7 @@ Zero Trust browser/IdP enrollment cannot reach `*.cloudflareaccess.com` / corpor
 | `openBrowser` | boolean | `true` | Launcher opens a browser when starting GUI |
 | `theme` | string | `system` | Reserved for future theme sync |
 | `locale` | string | `en` | UI locale (`public/locales/<locale>.json`) |
-| `notifications` | boolean | `true` | Desktop notifications on WARP connect/disconnect (requires `notify-send`) |
+| `notifications` | boolean | `true` | Desktop notifications on WARP connect/disconnect (requires `notify-send`). Cloudflare One Client posts its own, so the daemon stays quiet while `tray.shell` is `cloudflare` |
 
 ### `updates`
 
