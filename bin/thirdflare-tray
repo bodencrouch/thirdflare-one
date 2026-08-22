@@ -25,7 +25,7 @@ ThirdFlare One tray
 Usage:
   thirdflare-one-tray            Start the selected desktop app (Cloudflare One Client by default)
   thirdflare-one-tray --force-thirdflare
-                                 Start the ThirdFlare One tray instead, just this once
+                                 Start the ThirdFlare One tray for this session only
   thirdflare-one-tray --panel    Show the ThirdFlare One window (starts tray if needed)
   thirdflare-one-tray --settings Open ThirdFlare One preferences (PyQt6)
   thirdflare-one-tray --stop     Stop the active desktop app
@@ -83,9 +83,28 @@ start_cloudflare_shell() {
   run_thirdflare_tray
 }
 
+# One-session swap. The persisted choice is untouched, so Cloudflare One Client
+# returns at next login. Leave warp-desktop-svc running — only the tray icon clashes.
 run_thirdflare_tray() {
-  tray_shell_cli stop-cloudflare >/dev/null 2>&1 || true
-  run_tray
+  local had_cloudflare=0
+  if [[ "$(tray_shell_cli taskbar 2>/dev/null || echo stopped)" == "running" ]]; then
+    had_cloudflare=1
+  fi
+  tray_shell_cli stop-cloudflare-tray >/dev/null 2>&1 || true
+  if run_tray; then
+    if [[ "$had_cloudflare" -eq 1 ]]; then
+      echo "Stopped the Cloudflare One Client tray icon for this session." >&2
+      echo "Bring it back with: thirdflare-one-tray" >&2
+    fi
+    return 0
+  fi
+  # The ThirdFlare tray did not come up. Put back the icon we just took away
+  # rather than leaving the user with no tray at all.
+  if [[ "$had_cloudflare" -eq 1 ]]; then
+    echo "Restoring the Cloudflare One Client tray." >&2
+    tray_shell_cli start-cloudflare >/dev/null 2>&1 || true
+  fi
+  return 1
 }
 
 tray_python_bin() {

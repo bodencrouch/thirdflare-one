@@ -16,6 +16,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Detect a running `warp-desktop-svc` by command line — `pgrep -x` never matched its 16-character process name, so the fallback could start a second copy
 - Report WARP status from the active desktop app in `thirdflare-one-tray --status`
 - Start `warp-taskbar` from the user's home so its `.sentry-native/` cache no longer lands in the ThirdFlare install tree
+- Sandbox `HOME` and `XDG_CONFIG_HOME` in the suites that spawn the daemon — `npm run test:all` was rewriting the developer's real `~/.config/thirdflare/config.json` and deleting their real tray autostart entry
+- Thread `env` through `describeTrayShell` into `detectCloudflareGui`, so Flatpak detection reads the caller's environment instead of the sandbox
+- Re-enable `warp-desktop-svc.service` on uninstall when ThirdFlare had taken over the desktop app, so Cloudflare One Client keeps its background service
+- Scope `--force-thirdflare` to the session: stop only the Cloudflare tray icon, leave `warp-desktop-svc` running, and put the icon back if the ThirdFlare tray fails to start
 
 ### Documentation
 

@@ -12,7 +12,12 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const mockWarp = join(root, "scripts/mock-warp-cli.mjs");
 const port = Number(process.env.CI_OPENAPI_PORT || 14735);
 const baseUrl = `http://127.0.0.1:${port}`;
-const stateFile = join(mkdtempSync(join(tmpdir(), "tf-openapi-")), "state.json");
+const openapiTempDir = mkdtempSync(join(tmpdir(), "tf-openapi-"));
+const stateFile = join(openapiTempDir, "state.json");
+// Pin both: configPaths() keys off HOME, while the autostart and unit paths key
+// off XDG_CONFIG_HOME. Without both, POST /api/config/tray-shell rewrites the
+// developer's real config and deletes their real autostart entry.
+const configHome = join(openapiTempDir, "home");
 const spec = JSON.parse(readFileSync(join(root, "openapi/thirdflare-api.json"), "utf8"));
 
 /** @type {import('node:child_process').ChildProcess | null} */
@@ -72,6 +77,8 @@ before(async () => {
     cwd: root,
     env: {
       ...process.env,
+      HOME: configHome,
+      XDG_CONFIG_HOME: join(configHome, ".config"),
       PORT: String(port),
       WARP_CLI: mockWarp,
       MOCK_WARP_STATE: stateFile,
@@ -101,7 +108,7 @@ after(async () => {
     if (!serverProc.killed) serverProc.kill("SIGKILL");
   }
   try {
-    rmSync(dirname(stateFile), { recursive: true, force: true });
+    rmSync(openapiTempDir, { recursive: true, force: true });
   } catch {
     /* ignore */
   }
