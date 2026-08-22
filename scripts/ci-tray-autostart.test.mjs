@@ -20,13 +20,23 @@ import {
 } from "../lib/tray/autostart.mjs";
 import {
   buildCloudflareHiddenDesktop,
+  buildManagedWarpDesktopSvcUnit,
   cloudflareAutostartOverridePath,
   detectCloudflareGui,
   describeTrayShell,
   isThirdflareManagedCloudflareOverride,
+  managedWarpDesktopSvcUnitPath,
   resolveWarpGuiBinary,
+  shouldWatchStatusNotifications,
   syncCloudflareAutostartOverride,
-  syncTrayShell
+  syncManagedWarpDesktopSvcUnit,
+  syncWarpDesktopSvcUnit,
+  syncTrayShell,
+  underFlatpak,
+  warpGuiSpawnCommand,
+  warpProcessPattern,
+  WARP_DESKTOP_SVC_PATH,
+  WARP_TASKBAR_PATH
 } from "../lib/tray/shell.mjs";
 
 test("buildTrayAutostartDesktop is a valid hidden autostart entry", () => {
@@ -394,4 +404,141 @@ test("sync-tray-autostart --shell rejects unknown values", () => {
   } catch (error) {
     assert.equal(error.status, 2);
   }
+});
+
+test("Cloudflare One Client owns status notifications while it is active", () => {
+  assert.equal(shouldWatchStatusNotifications({ notifications: true, active: "cloudflare" }), false);
+  assert.equal(shouldWatchStatusNotifications({ notifications: true, active: "thirdflare" }), true);
+  assert.equal(shouldWatchStatusNotifications({ notifications: false, active: "thirdflare" }), false);
+  assert.equal(shouldWatchStatusNotifications({ notifications: false, active: "cloudflare" }), false);
+});
+
+test("underFlatpak follows FLATPAK_ID", () => {
+  assert.equal(underFlatpak({}), false);
+  assert.equal(underFlatpak({ FLATPAK_ID: "one.thirdflare.One" }), true);
+});
+
+test("warpGuiSpawnCommand allow-lists and resolves the host binary", () => {
+  const exists = (path) => path === WARP_TASKBAR_PATH;
+  const realpath = () => "/usr/lib/warp/warp-taskbar";
+
+  const taskbar = warpGuiSpawnCommand(WARP_TASKBAR_PATH, { env: {}, exists, realpath });
+  assert.deepEqual(taskbar, {
+    command: "/usr/lib/warp/warp-taskbar",
+    args: [],
+    path: "/usr/lib/warp/warp-taskbar",
+    host: false
+  });
+
+  assert.equal(warpGuiSpawnCommand("/usr/bin/warp-cli", { env: {}, exists, realpath }), null);
+  assert.equal(warpGuiSpawnCommand("/tmp/evil", { env: {}, exists, realpath }), null);
+  assert.equal(warpGuiSpawnCommand(WARP_DESKTOP_SVC_PATH, { env: {}, exists, realpath }), null);
+});
+
+test("warpGuiSpawnCommand hops to the host under Flatpak", () => {
+  const env = { FLATPAK_ID: "one.thirdflare.One" };
+  const hostExists = (path) => path === WARP_TASKBAR_PATH;
+
+  assert.deepEqual(warpGuiSpawnCommand(WARP_TASKBAR_PATH, { env, hostExists }), {
+    command: "flatpak-spawn",
+    args: ["--host", WARP_TASKBAR_PATH],
+    path: WARP_TASKBAR_PATH,
+    host: true
+  });
+  assert.equal(warpGuiSpawnCommand(WARP_DESKTOP_SVC_PATH, { env, hostExists }), null);
+});
+
+test("detectCloudflareGui probes the host filesystem under Flatpak", () => {
+  const env = { FLATPAK_ID: "one.thirdflare.One" };
+  const sandboxOnly = () => false;
+
+  assert.equal(
+    detectCloudflareGui({ env, exists: sandboxOnly, hostExists: () => true }),
+    true
+  );
+  assert.equal(
+    detectCloudflareGui({ env, exists: () => true, hostExists: sandboxOnly }),
+    false
+  );
+});
+
+test("buildManagedWarpDesktopSvcUnit runs warp-desktop-svc and carries the managed marker", () => {
+  const unit = buildManagedWarpDesktopSvcUnit(WARP_DESKTOP_SVC_PATH);
+  assert.equal(isThirdflareManagedCloudflareOverride(unit), true);
+  assert.match(unit, new RegExp(`^ExecStart=${WARP_DESKTOP_SVC_PATH}$`, "m"));
+  assert.match(unit, /^WantedBy=graphical-session.target$/m);
+});
+
+test("syncManagedWarpDesktopSvcUnit writes, reuses, and removes the fallback unit", () => {
+  const root = mkdtempSync(join(tmpdir(), "tf-warp-unit-"));
+  const env = { HOME: root, XDG_CONFIG_HOME: join(root, ".config") };
+
+  try {
+    const path = managedWarpDesktopSvcUnitPath(env);
+    assert.equal(existsSync(path), false);
+
+    const written = syncManagedWarpDesktopSvcUnit({ install: true, env });
+    assert.equal(written.written, true);
+    assert.equal(existsSync(path), true);
+
+    const again = syncManagedWarpDesktopSvcUnit({ install: true, env });
+    assert.equal(again.unchanged, true);
+
+    const removed = syncManagedWarpDesktopSvcUnit({ install: false, env });
+    assert.equal(removed.removed, true);
+    assert.equal(existsSync(path), false);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("syncManagedWarpDesktopSvcUnit never deletes a unit it did not write", () => {
+  const root = mkdtempSync(join(tmpdir(), "tf-warp-unit-keep-"));
+  const env = { HOME: root, XDG_CONFIG_HOME: join(root, ".config") };
+  const path = managedWarpDesktopSvcUnitPath(env);
+
+  try {
+    mkdirSync(dirname(path), { recursive: true });
+    writeFileSync(path, "[Unit]\nDescription=hand written\n");
+
+    const result = syncManagedWarpDesktopSvcUnit({ install: false, env });
+    assert.equal(result.preserved, true);
+    assert.equal(existsSync(path), true);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("warpProcessPattern matches the symlink and its WARP-tree target", () => {
+  const pattern = warpProcessPattern(WARP_TASKBAR_PATH, { realpath: () => "/usr/lib/warp/warp-taskbar" });
+  const matches = new RegExp(`^${pattern}$`);
+
+  assert.equal(matches.test(WARP_TASKBAR_PATH), true);
+  assert.equal(matches.test("/usr/lib/warp/warp-taskbar"), true);
+  assert.equal(matches.test("/usr/bin/warp-taskbar --debug"), true);
+  assert.equal(matches.test("/tmp/warp-taskbar"), false);
+  assert.equal(matches.test("warp-taskbar"), false);
+});
+
+test("warpProcessPattern ignores a link target outside the WARP tree", () => {
+  const pattern = warpProcessPattern(WARP_TASKBAR_PATH, { realpath: () => "/tmp/evil" });
+  assert.equal(new RegExp(`^${pattern}$`).test("/tmp/evil"), false);
+});
+
+test("warpProcessPattern covers the 16-character warp-desktop-svc name", () => {
+  const pattern = warpProcessPattern(WARP_DESKTOP_SVC_PATH, {
+    realpath: () => WARP_DESKTOP_SVC_PATH
+  });
+  assert.equal(new RegExp(`^${pattern}$`).test(WARP_DESKTOP_SVC_PATH), true);
+});
+
+test("syncWarpDesktopSvcUnit leaves unit management to the host under Flatpak", {
+  skip: process.platform !== "linux" ? "linux-only" : false
+}, () => {
+  const result = syncWarpDesktopSvcUnit({
+    enable: true,
+    env: { ...process.env, FLATPAK_ID: "one.thirdflare.One" }
+  });
+  assert.equal(result.skipped, true);
+  assert.equal(result.reason, "flatpak");
 });

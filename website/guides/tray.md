@@ -23,12 +23,15 @@ When ThirdFlare One is selected, left-click the tray icon opens the control pane
 
 ## vs API-only
 
-| | Desktop app | `--no-open` |
-|---|------|-------------|
-| Tray | Cloudflare One Client or ThirdFlare One | None |
-| Web UI | Embedded in the ThirdFlare One tray | Optional browser |
-| Notifications | Tray + libnotify | API only |
-| Use case | Desktop daily driver | Automation, servers |
+| | Cloudflare One Client | ThirdFlare One tray | `--no-open` |
+|---|---|---|---|
+| Tray | Cloudflare One Client | ThirdFlare One | None |
+| Web UI | Off until you turn it on | Embedded in the tray | Optional browser |
+| Notifications | Cloudflare One Client | ThirdFlare One + libnotify | API only |
+| ThirdFlare daemon | API only | Web UI enabled | API only |
+| Use case | Desktop daily driver | Full ThirdFlare UI | Automation, servers |
+
+The daemon keeps running behind Cloudflare One Client, so the kill switch and NetworkManager profiles stay available. It stays quiet on notifications while that tray is active, so a single connect does not notify twice.
 
 ## Stop
 
@@ -42,3 +45,5 @@ thirdflare --stop    # daemon (tray may need a separate stop)
 ## Packaging note
 
 ThirdFlare One launches the host WARP desktop app; it does not bundle it. PyQt6 is a runtime dependency only when you use the ThirdFlare One tray.
+
+`warp-desktop-svc` runs from the systemd user unit in the WARP package. When that package ships no unit, ThirdFlare One writes `~/.config/systemd/user/thirdflare-warp-desktop-svc.service` and enables that instead. Under Flatpak both binaries run on the host through `flatpak-spawn --host`.

@@ -70,6 +70,14 @@ if [[ -f "$CF_OVERRIDE" ]] && grep -q "Managed by ThirdFlare One" "$CF_OVERRIDE"
   rm -f "$CF_OVERRIDE"
 fi
 
+# Keep the fallback unit: it runs Cloudflare's own warp-desktop-svc, and on hosts
+# whose WARP package ships no unit it is the only thing starting that service.
+WARP_SVC_UNIT="${SYSTEMD_USER_DIR}/thirdflare-warp-desktop-svc.service"
+if [[ -f "$WARP_SVC_UNIT" ]]; then
+  echo "Left ${WARP_SVC_UNIT} in place — it starts Cloudflare One Client's background service."
+  echo "  Remove it with: systemctl --user disable --now thirdflare-warp-desktop-svc.service && rm ${WARP_SVC_UNIT}"
+fi
+
 for link in thirdflare thirdflare-one thirdflare-one-tray; do
   rm -f "${LOCAL_BIN}/${link}"
 done

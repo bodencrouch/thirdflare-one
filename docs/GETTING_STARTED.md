@@ -238,6 +238,14 @@ sudo apt install python3-pyqt6 python3-pyqt6-webengine
 
 Packaged `.deb`/`.rpm` installs ship `/usr/bin/thirdflare-one-tray` and recommend PyQt6 packages.
 
+#### What runs on the default path
+
+Cloudflare One Client draws the tray and posts its own status notifications. ThirdFlare One starts its daemon in API-only mode behind it, so the kill switch and NetworkManager profiles keep working. The ThirdFlare Web UI stays off until you turn it on with `thirdflare --daemon`, `webui.enabled`, or the ThirdFlare One tray.
+
+ThirdFlare One also starts `warp-desktop-svc`, the background service the Cloudflare tray talks to. It prefers the systemd user unit from the WARP package. When that package ships no unit, ThirdFlare One writes `~/.config/systemd/user/thirdflare-warp-desktop-svc.service` and enables that instead. Switching back to the ThirdFlare One tray removes it.
+
+Under Flatpak both binaries run on the host through `flatpak-spawn --host`.
+
 ### Tray autostart (ThirdFlare One tray)
 
 When the desktop app is ThirdFlare One, enable **Start tray at login** in Settings, or:

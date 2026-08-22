@@ -9,6 +9,8 @@ import {
   decorateTrayConfig,
   describeTrayShell,
   isValidTrayShell,
+  isWarpDesktopSvcRunning,
+  isWarpTaskbarRunning,
   startCloudflareGui,
   stopCloudflareGui,
   stopThirdflareTrayProcesses,
@@ -35,6 +37,15 @@ switch (command) {
     break;
   case "available":
     process.stdout.write(`${info.cloudflareAvailable ? "yes" : "no"}\n`);
+    break;
+  case "webui":
+    process.stdout.write(`${config.webui?.enabled ? "enabled" : "disabled"}\n`);
+    break;
+  case "svc":
+    process.stdout.write(`${isWarpDesktopSvcRunning() ? "running" : "stopped"}\n`);
+    break;
+  case "taskbar":
+    process.stdout.write(`${isWarpTaskbarRunning() ? "running" : "stopped"}\n`);
     break;
   case "sync": {
     const result = syncTrayShell({
