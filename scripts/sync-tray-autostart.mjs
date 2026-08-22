@@ -1,13 +1,28 @@
 #!/usr/bin/env node
-import { persistUserTrayShell, reloadConfig } from "../lib/config.mjs";
+import { existsSync, readFileSync } from "node:fs";
+import { configPaths, persistUserTrayShell, reloadConfig } from "../lib/config.mjs";
 import { isValidTrayShell, syncTrayShell } from "../lib/tray/shell.mjs";
 
 const args = process.argv.slice(2);
 let persistShell = null;
+let ifUnset = false;
 for (let i = 0; i < args.length; i += 1) {
   if (args[i] === "--shell") {
     persistShell = args[i + 1];
     i += 1;
+  } else if (args[i] === "--if-unset") {
+    ifUnset = true;
+  }
+}
+
+/** True when the user has already chosen a desktop app. */
+function userShellAlreadyChosen(env = process.env) {
+  const path = configPaths(env).user;
+  if (!existsSync(path)) return false;
+  try {
+    return typeof JSON.parse(readFileSync(path, "utf8"))?.tray?.shell === "string";
+  } catch {
+    return false;
   }
 }
 
@@ -16,12 +31,17 @@ if (persistShell != null) {
     console.error("tray shell must be cloudflare or thirdflare");
     process.exit(2);
   }
-  const autostart = persistShell === "thirdflare" ? true : undefined;
-  persistUserTrayShell({ shell: persistShell, autostart });
+  // --if-unset is the re-install path: seed a default, never overwrite a choice.
+  if (ifUnset && userShellAlreadyChosen()) {
+    console.log("Keeping the existing desktop app choice.");
+  } else {
+    const autostart = persistShell === "thirdflare" ? true : undefined;
+    persistUserTrayShell({ shell: persistShell, autostart });
+  }
 }
 
 const config = reloadConfig(process.env);
-const result = syncTrayShell({
+const result = await syncTrayShell({
   shell: config.tray?.shell,
   autostart: config.tray?.autostart
 });

@@ -254,7 +254,7 @@ When the desktop app is ThirdFlare One, enable **Start tray at login** in Settin
 "tray": { "shell": "thirdflare", "autostart": true }
 ```
 
-This writes `~/.config/autostart/thirdflare-one-tray.desktop` and hides the WARP package’s Cloudflare One Client autostart for this user. Choosing Cloudflare One Client restores that autostart and turns off the ThirdFlare One tray entry.
+This writes `~/.config/autostart/thirdflare-one-tray.desktop` and hides the WARP package’s Cloudflare One Client autostart for this user. Choosing Cloudflare One Client restores that autostart and removes the ThirdFlare One tray entry. Your autostart preference is remembered, so switching back to the ThirdFlare One tray brings it with you.
 
 ThirdFlare One does not bundle Cloudflare’s desktop app — it launches the copy already installed with `warp-cli`.
 

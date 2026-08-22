@@ -112,6 +112,8 @@ if [[ "$TRAY_SHELL_EXPLICIT" -eq 0 && -t 0 ]]; then
       TRAY_SHELL=cloudflare
       ;;
   esac
+  # An answered prompt is a choice, so apply it even on a re-install.
+  TRAY_SHELL_EXPLICIT=1
 fi
 
 thirdflare_require_command rsync
@@ -201,8 +203,14 @@ SETTINGS
 fi
 
 if [[ -f "${INSTALL_DIR}/scripts/sync-tray-autostart.mjs" ]]; then
-  THIRDFLARE_ONE_HOME="${INSTALL_DIR}" node "${INSTALL_DIR}/scripts/sync-tray-autostart.mjs" --shell "$TRAY_SHELL" >/dev/null 2>&1 || true
-  echo "Desktop app: ${TRAY_SHELL} (change later in Settings)."
+  # Without --shell on the command line this is a default to seed, not a choice
+  # to impose: a scripted re-install must not flip a user back to Cloudflare.
+  TRAY_SHELL_ARGS=(--shell "$TRAY_SHELL")
+  if [[ "$TRAY_SHELL_EXPLICIT" -eq 0 ]]; then
+    TRAY_SHELL_ARGS+=(--if-unset)
+  fi
+  THIRDFLARE_ONE_HOME="${INSTALL_DIR}" node "${INSTALL_DIR}/scripts/sync-tray-autostart.mjs" "${TRAY_SHELL_ARGS[@]}" >/dev/null 2>&1 || true
+  echo "Desktop app: $(THIRDFLARE_ONE_HOME="${INSTALL_DIR}" node "${INSTALL_DIR}/scripts/tray-shell-cli.mjs" active 2>/dev/null || echo "$TRAY_SHELL") (change later in Settings)."
 fi
 
 if [[ -x "${INSTALL_DIR}/scripts/thirdflare-nm" ]] && command -v nmcli >/dev/null 2>&1; then

@@ -52,7 +52,7 @@ All command output passes through `redactWarpOutput()` before serialization (dev
 
 Adding a parity feature means: add to `COMMANDS`/`ACTIONS`/`actionArgs` → extend `public/app.js` → update `openapi/thirdflare-api.json` (it's contract-tested) → note in `CHANGELOG.md`. Bump `API_REVISION` in `lib/api-revision.mjs` when route semantics change — it is served on `/api/health` and `scripts/daemon-ready.mjs` compares it so the launcher restarts a stale daemon instead of talking to it.
 
-Known gap: `/api/action` has no CSRF token. It's safe only on loopback; do not expose the Web UI remotely without adding auth.
+There is still no CSRF token. In its place, `crossSiteRejection()` in `server.js` gates every non-GET request on three signals: `Sec-Fetch-Site` (only `same-origin`/`none` pass), `Origin` (must match the host we were reached on), and `Content-Type` (must be `application/json`, which a cross-origin form cannot send). Non-browser clients send none of these and are unaffected. This stops a hostile page driving the daemon, but it is not authentication — do not expose the Web UI remotely without adding auth.
 
 ## Configuration layering
 
