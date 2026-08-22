@@ -70,10 +70,13 @@ tray_active_shell() {
 }
 
 start_cloudflare_shell() {
-  ensure_daemon_api_only
   mkdir -p "$RUNTIME_DIR" "$CACHE_DIR"
+  # Close the ThirdFlare tray and panel first. They talk to the Web UI daemon
+  # that ensure_daemon_api_only is about to restart, and an open panel left
+  # behind would just show a connection error.
   tray_shell_cli stop-thirdflare >/dev/null 2>&1 || true
   clear_tray_pid
+  ensure_daemon_api_only
   if tray_shell_cli start-cloudflare >>"$TRAY_LOG_FILE" 2>&1; then
     echo "Started Cloudflare One Client." >&2
     echo "Open ThirdFlare One Settings to switch to the ThirdFlare One tray." >&2

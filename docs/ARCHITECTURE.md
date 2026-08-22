@@ -108,7 +108,7 @@ Windows Cloudflare One exposes **Always On** in the client. Linux `warp-cli` has
 - Binds to loopback unless explicitly configured for remote Web UI.
 - No shell when invoking `warp-cli`; argument allow-lists for `/api/action`.
 - Destructive operations require GUI confirmation.
-- **Gap:** `/api/action` has no CSRF token yet — acceptable only on trusted localhost; do not expose remotely without adding auth.
+- **Cross-site guard:** every non-GET request passes `crossSiteRejection()` — `Sec-Fetch-Site`, `Origin`, and a required `application/json` content type. There is still no CSRF token and no authentication, so this remains localhost-only; do not expose remotely without adding auth.
 
 ## Packaging layout (FHS)
 

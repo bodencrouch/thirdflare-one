@@ -82,7 +82,7 @@ See [UPDATES.md](UPDATES.md) for the release → client pipeline.
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
 | `shell` | string | `cloudflare` | Desktop app in the system tray: `cloudflare` (Cloudflare One Client from the host WARP package) or `thirdflare` (ThirdFlare One tray). **Persisted** via `POST /api/config/tray-shell`, install `--shell`, or App → Settings |
-| `autostart` | boolean | `false` | When `shell` is `thirdflare`, write `~/.config/autostart/thirdflare-one-tray.desktop` so that tray starts at login (Linux). Ignored for login when `shell` is `cloudflare` because WARP already starts Cloudflare One Client. **Persisted** via `POST /api/config/tray-autostart` |
+| `autostart` | boolean | `false` | When `shell` is `thirdflare`, write `~/.config/autostart/thirdflare-one-tray.desktop` so that tray starts at login (Linux). The value is a remembered preference: it survives a switch to Cloudflare One Client and back, and the entry is only written while `shell` is `thirdflare`, so the two trays never fight at login. **Persisted** via `POST /api/config/tray-autostart`, whose response reports `active` and `effective` |
 
 ## Environment variables
 

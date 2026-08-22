@@ -174,8 +174,13 @@ def run_settings_dialog(*, tray_active: bool = False) -> int:
         client.post("/api/config/server", {"port": desired_port})
         restart_needed = True
       if desired_shell != (tray.get("shell") or "cloudflare"):
-        client.post("/api/config/tray-shell", {"shell": desired_shell})
-        _apply_live_shell()
+        applied = client.post("/api/config/tray-shell", {"shell": desired_shell}) or {}
+        # The daemon swaps the running shell itself whenever it has a display.
+        # Only swap from here when it did not, or the two passes race and
+        # isWarpTaskbarRunning() misses a taskbar that is still exec'ing —
+        # leaving two Cloudflare tray icons.
+        if not (applied.get("liveSwap") or {}).get("attempted"):
+          _apply_live_shell()
       if desired_autostart != bool(tray.get("autostart")) and desired_shell == "thirdflare":
         client.post("/api/config/tray-autostart", {"autostart": desired_autostart})
       if desired_notify != (ui.get("notifications", True) is not False):

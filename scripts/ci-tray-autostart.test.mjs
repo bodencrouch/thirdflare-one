@@ -39,12 +39,17 @@ import {
   WARP_TASKBAR_PATH
 } from "../lib/tray/shell.mjs";
 
-test("buildTrayAutostartDesktop is a valid hidden autostart entry", () => {
+test("buildTrayAutostartDesktop is an autostart entry the session will honour", () => {
   const desktop = buildTrayAutostartDesktop({ exec: "/usr/bin/thirdflare-one-tray", icon: "thirdflare" });
   assert.match(desktop, /^Type=Application/m);
   assert.match(desktop, /^Exec=\/usr\/bin\/thirdflare-one-tray/m);
-  assert.match(desktop, /^Hidden=true/m);
-  assert.match(desktop, /^NoDisplay=true/m);
+  assert.match(desktop, /^X-GNOME-Autostart-enabled=true/m);
+  // Hidden=true in an autostart dir means "ignore this entry" — it is how we
+  // disable Cloudflare's autostart, so it must never appear in our own.
+  assert.doesNotMatch(desktop, /^Hidden=true/m);
+  assert.doesNotMatch(desktop, /^NoDisplay=true/m);
+  // The Cloudflare override is the opposite: it exists to be ignored.
+  assert.match(buildCloudflareHiddenDesktop(), /^Hidden=true/m);
 });
 
 test("syncTrayAutostart writes and removes the desktop file", { skip: process.platform !== "linux" ? "linux-only" : false }, () => {
@@ -173,7 +178,7 @@ test("persistUserTrayShell rejects unknown values", () => {
   }
 });
 
-test("persistUserTrayShell cloudflare clears ThirdFlare autostart", () => {
+test("persistUserTrayShell keeps the autostart preference across a shell round trip", () => {
   const root = mkdtempSync(join(tmpdir(), "tf-tray-shell-clear-"));
   const userPath = join(root, ".config", "thirdflare", "config.json");
   mkdirSync(join(root, ".config", "thirdflare"), { recursive: true });
@@ -185,9 +190,18 @@ test("persistUserTrayShell cloudflare clears ThirdFlare autostart", () => {
     reloadConfig(env);
     const cfg = persistUserTrayShell({ shell: "cloudflare" }, { env });
     assert.equal(cfg.tray.shell, "cloudflare");
-    assert.equal(cfg.tray.autostart, false);
+    // Remembered, not applied: syncTrayShell writes no entry while Cloudflare is active.
+    assert.equal(cfg.tray.autostart, true);
     const onDisk = JSON.parse(readFileSync(userPath, "utf8"));
-    assert.equal(onDisk.tray.autostart, false);
+    assert.equal(onDisk.tray.autostart, true);
+    assert.equal(
+      describeTrayShell({ shell: "cloudflare", autostart: true, detect: { exists: () => true } }).active,
+      "cloudflare"
+    );
+
+    const back = persistUserTrayShell({ shell: "thirdflare" }, { env });
+    assert.equal(back.tray.shell, "thirdflare");
+    assert.equal(back.tray.autostart, true);
   } finally {
     clearSessionOverrides();
     reloadConfig(process.env);
@@ -278,7 +292,7 @@ test("buildCloudflareHiddenDesktop is a managed Hidden override", () => {
 
 test("syncTrayShell writes and removes the Cloudflare Hidden override", {
   skip: process.platform !== "linux" ? "linux-only" : false
-}, () => {
+}, async () => {
   const root = mkdtempSync(join(tmpdir(), "tf-tray-shell-sync-"));
   const env = { ...process.env, HOME: root, XDG_CONFIG_HOME: join(root, ".config") };
   const appRoot = join(root, "app");
@@ -293,7 +307,7 @@ test("syncTrayShell writes and removes the Cloudflare Hidden override", {
     const overridePath = cloudflareAutostartOverridePath(env);
     const trayPath = trayAutostartPath(env);
 
-    const thirdflare = syncTrayShell({
+    const thirdflare = await syncTrayShell({
       shell: "thirdflare",
       autostart: true,
       env,
@@ -307,7 +321,7 @@ test("syncTrayShell writes and removes the Cloudflare Hidden override", {
     assert.match(readFileSync(overridePath, "utf8"), /Hidden=true/);
     assert.equal(existsSync(trayPath), true);
 
-    const cloudflareMissing = syncTrayShell({
+    const cloudflareMissing = await syncTrayShell({
       shell: "cloudflare",
       autostart: true,
       env,
@@ -320,7 +334,7 @@ test("syncTrayShell writes and removes the Cloudflare Hidden override", {
 
     writeFileSync(join(root, "warp-taskbar"), "");
     writeFileSync(join(root, "warp-desktop-svc"), "");
-    const cloudflare = syncTrayShell({
+    const cloudflare = await syncTrayShell({
       shell: "cloudflare",
       autostart: true,
       env,
@@ -358,8 +372,8 @@ test("syncCloudflareAutostartOverride preserves unmanaged user files", {
   }
 });
 
-test("syncTrayShell is a no-op on non-linux", () => {
-  const result = syncTrayShell({ shell: "thirdflare", platform: "darwin", manageUnit: false });
+test("syncTrayShell is a no-op on non-linux", async () => {
+  const result = await syncTrayShell({ shell: "thirdflare", platform: "darwin", manageUnit: false });
   assert.equal(result.skipped, true);
   assert.equal(result.reason, "non-linux");
 });
@@ -385,7 +399,15 @@ test("sync-tray-autostart --shell thirdflare persists without prompting", () => 
     execFileSync(process.execPath, [syncScript, "--shell", "cloudflare"], { env, encoding: "utf8" });
     const cloudflare = JSON.parse(readFileSync(join(userDir, "config.json"), "utf8"));
     assert.equal(cloudflare.tray.shell, "cloudflare");
-    assert.equal(cloudflare.tray.autostart, false);
+    // The preference is remembered, but the entry that would fight Cloudflare
+    // at login is gone — that is the part that has to be true.
+    assert.equal(cloudflare.tray.autostart, true);
+    assert.equal(existsSync(trayAutostartPath(env)), false);
+
+    // --if-unset seeds a default; it must never overwrite an existing choice.
+    execFileSync(process.execPath, [syncScript, "--shell", "thirdflare", "--if-unset"], { env, encoding: "utf8" });
+    const kept = JSON.parse(readFileSync(join(userDir, "config.json"), "utf8"));
+    assert.equal(kept.tray.shell, "cloudflare");
   } finally {
     clearSessionOverrides();
     reloadConfig(process.env);
@@ -534,8 +556,8 @@ test("warpProcessPattern covers the 16-character warp-desktop-svc name", () => {
 
 test("syncWarpDesktopSvcUnit leaves unit management to the host under Flatpak", {
   skip: process.platform !== "linux" ? "linux-only" : false
-}, () => {
-  const result = syncWarpDesktopSvcUnit({
+}, async () => {
+  const result = await syncWarpDesktopSvcUnit({
     enable: true,
     env: { ...process.env, FLATPAK_ID: "one.thirdflare.One" }
   });
@@ -562,4 +584,27 @@ test("describeTrayShell threads env into Cloudflare detection", () => {
   });
   assert.equal(noHostWarp.cloudflareAvailable, false);
   assert.equal(noHostWarp.active, "thirdflare");
+});
+
+test("sync-tray-autostart --if-unset seeds a first choice", () => {
+  const root = mkdtempSync(join(tmpdir(), "tf-sync-seed-"));
+  const userDir = join(root, ".config", "thirdflare");
+  mkdirSync(userDir, { recursive: true });
+  const env = {
+    ...process.env,
+    HOME: root,
+    XDG_CONFIG_HOME: join(root, ".config"),
+    THIRDFLARE_TRAY_SKIP_SYSTEMD: "1",
+    THIRDFLARE_TRAY_LIVE: "0"
+  };
+  const syncScript = join(dirname(fileURLToPath(import.meta.url)), "sync-tray-autostart.mjs");
+  try {
+    execFileSync(process.execPath, [syncScript, "--shell", "thirdflare", "--if-unset"], { env, encoding: "utf8" });
+    const onDisk = JSON.parse(readFileSync(join(userDir, "config.json"), "utf8"));
+    assert.equal(onDisk.tray.shell, "thirdflare");
+  } finally {
+    clearSessionOverrides();
+    reloadConfig(process.env);
+    rmSync(root, { recursive: true, force: true });
+  }
 });

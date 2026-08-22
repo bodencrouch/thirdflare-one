@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixes
 
+- Reject cross-site writes on every mutating route (`Sec-Fetch-Site`, `Origin`, and a required `application/json` content type), so a hostile page can no longer drive `warp-cli`, systemd, or the user's config through the loopback daemon
+- Run `systemctl --user` and `pkill` off the event loop — a hung user manager could block every SSE subscriber and health check for the length of the timeout
+- Fix tray autostart never starting: the generated entry carried `Hidden=true`, which in an autostart directory means "ignore this entry" (`systemd-xdg-autostart-generator` logs "not generating unit, entry is hidden")
+- Keep `tray.autostart` as a remembered preference instead of forcing it off when Cloudflare One Client is selected, so it survives a switch there and back
+- Report `active` and `effective` from `POST /api/config/tray-autostart` rather than a bare `ok` for a preference that changes nothing today
+- Re-evaluate notification ownership when the desktop app or `ui.notifications` changes, instead of freezing it at daemon startup
+- Stop a scripted or piped re-install from resetting the user's desktop-app choice (`sync-tray-autostart --if-unset`)
+- Close the ThirdFlare tray and panel before restarting the daemon they talk to, so switching to Cloudflare One Client no longer leaves an open panel showing a connection error
+- Do not swap the running shell twice when saving from the native settings dialog — the daemon already does it, and the second pass could leave two Cloudflare tray icons
+- Skip the live shell swap on non-Linux instead of falling through to the ThirdFlare branch and running `pkill`/`spawn` there
+
 - Keep the ThirdFlare Web UI off while Cloudflare One Client is the desktop app — the daemon now starts API-only on that path
 - Turn the Web UI back off when switching from the ThirdFlare One tray to Cloudflare One Client, unless `webui.enabled` is set
 - Leave `warp-desktop-svc` unit management to the host under Flatpak instead of writing a unit systemd never reads
@@ -32,6 +43,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Features
 
+- Document every mutating route in `openapi/thirdflare-api.json`, including `POST /api/config/tray-autostart` and the shared `403` cross-site response
 - Desktop app switch: default to host Cloudflare One Client tray, or ThirdFlare One’s PyQt6 tray (`tray.shell`, `POST /api/config/tray-shell`, install `--shell`)
 - Run `warp-desktop-svc` from a ThirdFlare-managed systemd user unit when the WARP package ships none (`~/.config/systemd/user/thirdflare-warp-desktop-svc.service`)
 - Launch `warp-taskbar` and `warp-desktop-svc` on the host through `flatpak-spawn --host` when ThirdFlare One runs under Flatpak

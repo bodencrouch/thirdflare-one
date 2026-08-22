@@ -42,13 +42,13 @@ switch (command) {
     process.stdout.write(`${config.webui?.enabled ? "enabled" : "disabled"}\n`);
     break;
   case "svc":
-    process.stdout.write(`${isWarpDesktopSvcRunning() ? "running" : "stopped"}\n`);
+    process.stdout.write(`${(await isWarpDesktopSvcRunning()) ? "running" : "stopped"}\n`);
     break;
   case "taskbar":
-    process.stdout.write(`${isWarpTaskbarRunning() ? "running" : "stopped"}\n`);
+    process.stdout.write(`${(await isWarpTaskbarRunning()) ? "running" : "stopped"}\n`);
     break;
   case "sync": {
-    const result = syncTrayShell({
+    const result = await syncTrayShell({
       shell: config.tray?.shell,
       autostart: config.tray?.autostart
     });
@@ -63,7 +63,7 @@ switch (command) {
     }
     const autostart = shell === "thirdflare" ? true : undefined;
     const next = persistUserTrayShell({ shell, autostart });
-    const result = applyTrayShell({
+    const result = await applyTrayShell({
       shell: next.tray?.shell,
       autostart: next.tray?.autostart,
       live: false
@@ -72,7 +72,7 @@ switch (command) {
     break;
   }
   case "start": {
-    const result = applyTrayShell({
+    const result = await applyTrayShell({
       shell: config.tray?.shell,
       autostart: config.tray?.autostart,
       live: true
@@ -81,26 +81,26 @@ switch (command) {
     break;
   }
   case "start-cloudflare": {
-    stopThirdflareTrayProcesses();
-    const started = startCloudflareGui();
+    await stopThirdflareTrayProcesses();
+    const started = await startCloudflareGui();
     printJson(started);
     if (started.ok === false) process.exit(1);
     break;
   }
   case "stop-cloudflare":
-    printJson(stopCloudflareGui());
+    printJson(await stopCloudflareGui());
     break;
   case "stop-cloudflare-tray":
     // One-session swap: drop the tray icon, leave warp-desktop-svc alone.
-    printJson(stopCloudflareGui({ keepService: true }));
+    printJson(await stopCloudflareGui({ keepService: true }));
     break;
   case "stop-thirdflare":
-    printJson(stopThirdflareTrayProcesses());
+    printJson(await stopThirdflareTrayProcesses());
     break;
   case "stop": {
-    const stopped = { thirdflare: stopThirdflareTrayProcesses() };
+    const stopped = { thirdflare: await stopThirdflareTrayProcesses() };
     if (info.active === "cloudflare") {
-      stopped.cloudflare = stopCloudflareGui();
+      stopped.cloudflare = await stopCloudflareGui();
     }
     printJson({ ok: true, ...stopped });
     break;
