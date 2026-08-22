@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixes
 
+- Ship the modules the packaged daemon actually imports: `lib/api-revision.mjs`, `lib/tray/shell.mjs`, `lib/warp/split-tunnel.mjs`, `lib/warp/status-listener.mjs`, plus `daemon-ready.mjs`, `tray-shell-cli.mjs`, and `tray-warp-action.py`. The installed `.deb` failed at startup with `ERR_MODULE_NOT_FOUND`
+- Add `npm run test:packaging`, which derives the required file set from the code and fails when `stage-payload.sh` misses one
 - Green up Plane M CI: the proxy-launcher XDG tests asserted Linux-only behaviour on macOS and Windows, where `listDesktopApps()` returns `[]` by design, so every OS had been failing since July
 - Reject cross-site writes on every mutating route (`Sec-Fetch-Site`, `Origin`, and a required `application/json` content type), so a hostile page can no longer drive `warp-cli`, systemd, or the user's config through the loopback daemon
 - Run `systemctl --user` and `pkill` off the event loop — a hung user manager could block every SSE subscriber and health check for the length of the timeout
