@@ -118,6 +118,7 @@ before(async () => {
     env: {
       ...process.env,
       HOME: configHome,
+      XDG_CONFIG_HOME: join(configHome, ".config"),
       PORT: String(port),
       WARP_CLI: mockWarp,
       MOCK_WARP_STATE: stateFile,

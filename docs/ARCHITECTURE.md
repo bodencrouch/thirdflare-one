@@ -34,7 +34,7 @@ flowchart LR
 | `lib/config.mjs` | Layered configuration merge + session overrides |
 | `public/` | Web UI (PWA-capable), optional when `webui.enabled=false` |
 | `bin/thirdflare` | Launcher: selected desktop app (Cloudflare One Client by default), daemon lifecycle |
-| `bin/thirdflare-tray` | Starts the selected shell; `--force-thirdflare` for PyQt6/SNI/yad; `--settings` for native prefs |
+| `bin/thirdflare-tray` | Starts the selected shell; `--force-thirdflare` for a session-only PyQt6/SNI/yad swap; `--settings` for native prefs |
 | `scripts/tray-qt.py` | Embedded WebEngine window + ThirdFlare One system tray |
 | `scripts/thirdflare-nft-apply` | Polkit-scoped privileged helper for kill-switch nft apply |
 | `lib/tray/autostart.mjs` | ThirdFlare One tray XDG autostart (`tray.autostart`) |

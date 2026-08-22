@@ -65,9 +65,19 @@ fi
 
 AUTOSTART_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/autostart"
 rm -f "${AUTOSTART_DIR}/thirdflare-one-tray.desktop"
+# The Hidden override is the marker that ThirdFlare took over the desktop app.
+# It hid Cloudflare's autostart and disabled its service in the same step, so
+# hand both back — otherwise Cloudflare One Client returns at next login with no
+# background service and no sign of why.
 CF_OVERRIDE="${AUTOSTART_DIR}/com.cloudflare.WarpTaskbar.desktop"
 if [[ -f "$CF_OVERRIDE" ]] && grep -q "Managed by ThirdFlare One" "$CF_OVERRIDE"; then
   rm -f "$CF_OVERRIDE"
+  if [[ -f /usr/lib/systemd/user/warp-desktop-svc.service ]]; then
+    systemctl --user enable --now warp-desktop-svc.service >/dev/null 2>&1 || true
+    echo "Restored Cloudflare One Client autostart and warp-desktop-svc.service."
+  else
+    echo "Restored Cloudflare One Client autostart."
+  fi
 fi
 
 # Keep the fallback unit: it runs Cloudflare's own warp-desktop-svc, and on hosts

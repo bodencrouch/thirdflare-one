@@ -90,6 +90,10 @@ switch (command) {
   case "stop-cloudflare":
     printJson(stopCloudflareGui());
     break;
+  case "stop-cloudflare-tray":
+    // One-session swap: drop the tray icon, leave warp-desktop-svc alone.
+    printJson(stopCloudflareGui({ keepService: true }));
+    break;
   case "stop-thirdflare":
     printJson(stopThirdflareTrayProcesses());
     break;

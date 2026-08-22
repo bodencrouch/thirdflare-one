@@ -542,3 +542,24 @@ test("syncWarpDesktopSvcUnit leaves unit management to the host under Flatpak", 
   assert.equal(result.skipped, true);
   assert.equal(result.reason, "flatpak");
 });
+
+test("describeTrayShell threads env into Cloudflare detection", () => {
+  const flatpak = { FLATPAK_ID: "one.thirdflare.One" };
+
+  // Sandbox paths are empty; the host has WARP. Detection must follow env.
+  const onHost = describeTrayShell({
+    shell: "cloudflare",
+    env: flatpak,
+    detect: { exists: () => false, hostExists: () => true }
+  });
+  assert.equal(onHost.cloudflareAvailable, true);
+  assert.equal(onHost.active, "cloudflare");
+
+  const noHostWarp = describeTrayShell({
+    shell: "cloudflare",
+    env: flatpak,
+    detect: { exists: () => true, hostExists: () => false }
+  });
+  assert.equal(noHostWarp.cloudflareAvailable, false);
+  assert.equal(noHostWarp.active, "thirdflare");
+});
